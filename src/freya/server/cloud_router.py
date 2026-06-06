@@ -370,8 +370,9 @@ async def stream_cloud(
             raise ValueError(
                 "OPENROUTER_API_KEY not set — add it in the Cloud Models tab"
             )
+        actual_model = model.removeprefix("openrouter/")
         async for token in _stream_openai(
-            model,
+            actual_model,
             messages,
             temperature,
             max_tokens,
