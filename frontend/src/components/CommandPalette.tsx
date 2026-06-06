@@ -235,36 +235,42 @@ export function CommandPalette() {
                 </div>
               ) : (
                 CLOUD_PROVIDERS.filter((p) => p.id !== 'custom').map((provider) => {
-                  const key = apiKeys[provider.id] || '';
-                  const hasKey = !!key;
-                  const isVisible = showKeys[provider.id];
+                  // Use provider status from backend to check if configured
                   const pm = providerModels.find((p) => p.id === provider.id);
                   const modelCount = pm?.models?.length || 0;
+                  const isConfigured = modelCount > 0;
+                  const key = apiKeys[provider.id] || '';
+                  const isVisible = showKeys[provider.id];
 
                   return (
                     <div key={provider.id} className="mb-4">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-base">{provider.icon}</span>
                         <span className="text-xs font-medium" style={{ color: 'var(--color-text)' }}>{provider.name}</span>
-                        {hasKey && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'color-mix(in srgb, var(--color-success) 10%, transparent)', color: 'var(--color-success)' }}>
-                            {modelCount > 0 ? `${modelCount} models` : 'Connected'}
+                        {isConfigured ? (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full flex items-center gap-1" style={{ background: 'color-mix(in srgb, var(--color-success) 10%, transparent)', color: 'var(--color-success)' }}>
+                            <Check size={10} />
+                            {modelCount} models
+                          </span>
+                        ) : (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'var(--color-bg-tertiary)', color: 'var(--color-text-tertiary)' }}>
+                            Not configured
                           </span>
                         )}
                       </div>
 
-                      {/* API key input */}
-                      <div className="flex gap-1.5 mb-2">
-                        <div className="flex-1 flex items-center rounded-lg" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}>
-                          <Key size={12} className="ml-2.5 shrink-0" style={{ color: 'var(--color-text-tertiary)' }} />
+                      {/* API key input — shown only for unconfigured providers */}
+                      {!isConfigured && (
+                        <div className="flex gap-1.5 mb-2">
+                          <div className="flex-1 flex items-center rounded-lg" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}>
+                            <Key size={12} className="ml-2.5 shrink-0" style={{ color: 'var(--color-text-tertiary)' }} />
                           <input
                             type={isVisible ? 'text' : 'password'}
                             value={key}
                             onChange={(e) => setApiKeys((prev) => ({ ...prev, [provider.id]: e.target.value }))}
-                            onBlur={(e) => {
-                              const newVal = e.target.value;
-                              if (newVal !== (apiKeys[provider.id] || '')) {
-                                handleSaveKey(provider.id, newVal);
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleSaveKey(provider.id, apiKeys[provider.id] || '');
                               }
                             }}
                             placeholder={provider.apiKeyPlaceholder}
@@ -278,54 +284,33 @@ export function CommandPalette() {
                             {isVisible ? <EyeOff size={12} /> : <Eye size={12} />}
                           </button>
                         </div>
-                        {hasKey && (
-                          <button
-                            onClick={() => handleSaveKey(provider.id, '')}
-                            className="px-2 py-1 rounded-lg text-[10px] cursor-pointer"
-                            style={{ color: 'var(--color-error)', border: '1px solid var(--color-error)' }}
-                          >
-                            Remove
-                          </button>
-                        )}
-                        {saving === provider.id && (
-                          <Loader2 size={14} className="animate-spin self-center" style={{ color: 'var(--color-accent)' }} />
-                        )}
+                        <button
+                          onClick={() => handleSaveKey(provider.id, key)}
+                          disabled={!key.trim() || saving === provider.id}
+                          className="px-3 py-1 rounded-lg text-[10px] font-medium cursor-pointer transition-colors"
+                          style={{
+                            background: key.trim() ? 'var(--color-accent)' : 'var(--color-bg-tertiary)',
+                            color: key.trim() ? 'var(--color-on-accent)' : 'var(--color-text-tertiary)',
+                            opacity: saving === provider.id ? 0.6 : 1,
+                          }}
+                        >
+                          {saving === provider.id ? (
+                            <><Loader2 size={10} className="animate-spin inline mr-1" />Saving...</>
+                          ) : 'Save Key'}
+                        </button>
                       </div>
+                      )}
 
-                      {/* Available models */}
-                      {hasKey && modelCount > 0 && (
-                        <div className="ml-6 flex flex-col gap-1">
-                          {pm!.models.map((modelId) => {
-                            const isActive = modelId === selectedModel;
-                            return (
-                              <button
-                                key={modelId}
-                                onClick={() => handleSelect(modelId)}
-                                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left cursor-pointer transition-colors"
-                                style={{ background: isActive ? 'var(--color-accent-subtle)' : 'transparent' }}
-                                onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'var(--color-bg-secondary)'; }}
-                                onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
-                              >
-                                <Cloud size={12} style={{ color: isActive ? 'var(--color-accent)' : 'var(--color-text-tertiary)' }} />
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-xs truncate" style={{ color: isActive ? 'var(--color-accent)' : 'var(--color-text)', fontWeight: isActive ? 500 : 400 }}>
-                                    {modelId}
-                                  </div>
-                                </div>
-                                {isActive && (
-                                  <span className="text-[9px] px-1.5 py-0.5 rounded-full shrink-0" style={{ background: 'var(--color-accent-subtle)', color: 'var(--color-accent)' }}>
-                                    Active
-                                  </span>
-                                )}
-                              </button>
-                            );
-                          })}
+                      {/* Show configured models count */}
+                      {isConfigured && (
+                        <div className="ml-6 mb-1 text-[10px]" style={{ color: 'var(--color-text-tertiary)' }}>
+                          Models available in the <span className="font-medium" style={{ color: 'var(--color-accent)' }}>Models</span> tab
                         </div>
                       )}
 
-                      {hasKey && modelCount === 0 && !cloudLoading && (
+                      {!isConfigured && !cloudLoading && (
                         <div className="ml-6 text-[10px]" style={{ color: 'var(--color-text-tertiary)' }}>
-                          No models available — verify your API key
+                          Enter your API key and press Enter
                         </div>
                       )}
                     </div>
