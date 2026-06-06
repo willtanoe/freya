@@ -55,6 +55,9 @@ def _load_keys() -> dict[str, str]:
         "GOOGLE_API_KEY",
         "OPENROUTER_API_KEY",
         "MINIMAX_API_KEY",
+        "CUSTOM_API_KEY",
+        "CUSTOM_MODELS",
+        "OPENAI_BASE_URL",
     ):
         val = os.environ.get(name)
         if val:
@@ -74,6 +77,8 @@ def get_provider(model: str) -> str | None:
         return "minimax"
     if any(model.startswith(org) for org in _LOCAL_HF_ORGS):
         return None  # local model, never route to cloud
+    if model.startswith("custom/"):
+        return "custom"
     if "/" in model:  # openrouter format: "meta-llama/llama-3-8b"
         return "openrouter"
     return None
@@ -396,19 +401,22 @@ async def stream_cloud(
         ):
             yield token
 
-    else:
-        # Custom OpenAI-compatible endpoint (e.g. DeepSeek, xAI, local LLM)
+    elif provider == "custom":
         custom_base = os.environ.get("OPENAI_BASE_URL", "")
-        custom_key = _load_keys().get("OPENAI_API_KEY", "")
-        if custom_base and custom_key:
-            async for token in _stream_openai(
-                model,
-                messages,
-                temperature,
-                max_tokens,
-                base_url=custom_base.rstrip("/"),
-                api_key_name="OPENAI_API_KEY",
-            ):
-                yield token
-        else:
-            raise ValueError(f"Unknown cloud provider for model: {model!r}")
+        keys = _load_keys()
+        custom_key = keys.get("CUSTOM_API_KEY") or keys.get("OPENAI_API_KEY", "")
+        if not custom_base or not custom_key:
+            raise ValueError("Custom provider not configured — set Base URL + API Key in Settings")
+        actual_model = model.removeprefix("custom/")
+        async for token in _stream_openai(
+            actual_model,
+            messages,
+            temperature,
+            max_tokens,
+            base_url=custom_base.rstrip("/"),
+            api_key_name="CUSTOM_API_KEY",
+        ):
+            yield token
+
+    else:
+        raise ValueError(f"Unknown cloud provider for model: {model!r}")

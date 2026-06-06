@@ -282,6 +282,8 @@ class CloudEngine(InferenceEngine):
         self._openrouter_client: Any = None
         self._minimax_client: Any = None
         self._codex_client: Any = None
+        self._custom_client: Any = None
+        self._custom_base_url: str = ""
         # Gemini thought_signatures: tool_call_id -> signature bytes
         self._thought_sigs: Dict[str, bytes] = {}
         self._init_clients()
@@ -342,6 +344,21 @@ class CloudEngine(InferenceEngine):
                 )
             except ImportError:
                 pass
+        # Custom OpenAI-compatible endpoint (DeepSeek, Groq, xAI, etc.)
+        custom_base = os.environ.get("OPENAI_BASE_URL", "").rstrip("/")
+        custom_key = os.environ.get("CUSTOM_API_KEY") or os.environ.get("OPENAI_API_KEY", "")
+        if custom_base and custom_key:
+            try:
+                import openai
+
+                self._custom_client = openai.OpenAI(
+                    base_url=custom_base,
+                    api_key=custom_key,
+                )
+                self._custom_base_url = custom_base
+            except ImportError:
+                pass
+
         # Codex — uses the OpenAI Responses API.
         # Supports both standard API keys (api.openai.com) and ChatGPT
         # OAuth tokens (chatgpt.com) via OPENAI_CODEX_BASE_URL override.
@@ -509,6 +526,72 @@ class CloudEngine(InferenceEngine):
             "cost_usd": 0.0,
             "ttft": elapsed,
         }
+
+    def _generate_custom(
+        self,
+        messages: Sequence[Message],
+        *,
+        model: str,
+        temperature: float,
+        max_tokens: int,
+        **kwargs: Any,
+    ) -> Dict[str, Any]:
+        if self._custom_client is None:
+            raise EngineConnectionError(
+                "Custom client not available — set OPENAI_BASE_URL + CUSTOM_API_KEY"
+            )
+        actual_model = model.removeprefix("custom/")
+        response_format = kwargs.pop("response_format", None)
+        create_kwargs: Dict[str, Any] = {
+            "model": actual_model,
+            "messages": messages_to_dicts(messages),
+            "max_completion_tokens": max_tokens,
+            "temperature": temperature,
+            **kwargs,
+        }
+        if response_format is not None:
+            from freya.engine._stubs import ResponseFormat
+
+            if isinstance(response_format, ResponseFormat):
+                if response_format.type == "json_schema" and response_format.schema:
+                    create_kwargs["response_format"] = {
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": "response",
+                            "schema": response_format.schema,
+                        },
+                    }
+                else:
+                    create_kwargs["response_format"] = {"type": "json_object"}
+
+        t0 = time.monotonic()
+        resp = self._custom_client.chat.completions.create(**create_kwargs)
+        elapsed = time.monotonic() - t0
+        choice = resp.choices[0]
+        usage = resp.usage
+        prompt_tokens = usage.prompt_tokens if usage else 0
+        completion_tokens = usage.completion_tokens if usage else 0
+        result = {
+            "content": choice.message.content or "",
+            "usage": {
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": (usage.total_tokens if usage else 0),
+            },
+            "model": resp.model or actual_model,
+            "finish_reason": choice.finish_reason or "stop",
+            "ttft": elapsed,
+        }
+        if hasattr(choice.message, "tool_calls") and choice.message.tool_calls:
+            result["tool_calls"] = [
+                {
+                    "id": tc.id,
+                    "name": tc.function.name,
+                    "arguments": tc.function.arguments,
+                }
+                for tc in choice.message.tool_calls
+            ]
+        return result
 
     def _generate_openai(
         self,
@@ -1000,6 +1083,8 @@ class CloudEngine(InferenceEngine):
             return self._generate_anthropic(messages, **kw)
         if _is_google_model(model):
             return self._generate_google(messages, **kw)
+        if self._custom_client is not None:
+            return self._generate_custom(messages, **kw)
         return self._generate_openai(messages, **kw)
 
     async def stream(
@@ -1031,6 +1116,9 @@ class CloudEngine(InferenceEngine):
                 yield token
         elif _is_google_model(model):
             async for token in self._stream_google(messages, **kw):
+                yield token
+        elif self._custom_client is not None:
+            async for token in self._stream_custom(messages, **kw):
                 yield token
         else:
             async for token in self._stream_openai(messages, **kw):
@@ -1091,6 +1179,32 @@ class CloudEngine(InferenceEngine):
                         delta = event.get("delta", "")
                         if delta:
                             yield delta
+
+    async def _stream_custom(
+        self,
+        messages: Sequence[Message],
+        *,
+        model: str,
+        temperature: float,
+        max_tokens: int,
+        **kwargs: Any,
+    ) -> AsyncIterator[str]:
+        if self._custom_client is None:
+            raise EngineConnectionError("Custom client not available")
+        actual_model = model.removeprefix("custom/")
+        create_kwargs: Dict[str, Any] = {
+            "model": actual_model,
+            "messages": messages_to_dicts(messages),
+            "max_completion_tokens": max_tokens,
+            "stream": True,
+            "temperature": temperature,
+            **kwargs,
+        }
+        resp = self._custom_client.chat.completions.create(**create_kwargs)
+        for chunk in resp:
+            delta = chunk.choices[0].delta if chunk.choices else None
+            if delta and delta.content:
+                yield delta.content
 
     async def _stream_openai(
         self,
@@ -1238,6 +1352,57 @@ class CloudEngine(InferenceEngine):
                 yield delta.content
 
     # -- stream_full: rich streaming with tool_calls support ----------------
+
+    async def _stream_full_custom(
+        self,
+        messages: Sequence[Message],
+        *,
+        model: str,
+        temperature: float,
+        max_tokens: int,
+        **kwargs: Any,
+    ) -> AsyncIterator[StreamChunk]:
+        """Yield StreamChunks from a custom OpenAI-compatible endpoint."""
+        if self._custom_client is None:
+            raise EngineConnectionError("Custom client not available")
+        actual_model = model.removeprefix("custom/")
+        create_kwargs: Dict[str, Any] = {
+            "model": actual_model,
+            "messages": messages_to_dicts(messages),
+            "max_completion_tokens": max_tokens,
+            "stream": True,
+            "temperature": temperature,
+            **kwargs,
+        }
+        resp = self._custom_client.chat.completions.create(**create_kwargs)
+        for chunk in resp:
+            choice = chunk.choices[0] if chunk.choices else None
+            if not choice:
+                continue
+            delta = choice.delta
+            content = delta.content if delta else None
+            tool_calls = None
+            if delta and delta.tool_calls:
+                tool_calls = [
+                    {
+                        "index": tc.index,
+                        "id": tc.id or "",
+                        "function": {
+                            "name": (tc.function.name or "") if tc.function else "",
+                            "arguments": (
+                                (tc.function.arguments or "") if tc.function else ""
+                            ),
+                        },
+                    }
+                    for tc in delta.tool_calls
+                ]
+            finish = choice.finish_reason
+            if content or tool_calls or finish:
+                yield StreamChunk(
+                    content=content,
+                    tool_calls=tool_calls,
+                    finish_reason=finish,
+                )
 
     async def _stream_full_openai(
         self,
@@ -1440,6 +1605,9 @@ class CloudEngine(InferenceEngine):
         elif _is_google_model(model):
             async for chunk in super().stream_full(messages, **kw):
                 yield chunk
+        elif self._custom_client is not None:
+            async for chunk in self._stream_full_custom(messages, **kw):
+                yield chunk
         else:
             async for chunk in self._stream_full_openai(messages, **kw):
                 yield chunk
@@ -1474,7 +1642,42 @@ class CloudEngine(InferenceEngine):
             models.extend(_MINIMAX_MODELS)
         if self._codex_client is not None:
             models.extend(_CODEX_MODELS)
+        if self._custom_client is not None:
+            custom_ids = self._fetch_custom_models()
+            if custom_ids:
+                models.extend(custom_ids)
         return models
+
+    def _fetch_custom_models(self) -> List[str]:
+        """Try /v1/models on the custom endpoint, prefix with custom/.
+        
+        Falls back to CUSTOM_MODELS env if the endpoint does not respond.
+        """
+        try:
+            import httpx
+
+            base = self._custom_base_url
+            api_key = self._custom_client.api_key
+            resp = httpx.get(
+                f"{base}/models",
+                headers={"Authorization": f"Bearer {api_key}"},
+                timeout=15,
+            )
+            if resp.is_success:
+                ids: List[str] = []
+                for m in resp.json().get("data", []):
+                    mid = m.get("id", "")
+                    if mid:
+                        ids.append(f"custom/{mid}")
+                if ids:
+                    return ids
+        except Exception:
+            pass
+        # Fallback to user-defined model list
+        custom_str = os.environ.get("CUSTOM_MODELS", "")
+        if custom_str:
+            return [f"custom/{m.strip()}" for m in custom_str.split(",") if m.strip()]
+        return []
 
     def health(self) -> bool:
         return (
@@ -1484,6 +1687,7 @@ class CloudEngine(InferenceEngine):
             or self._openrouter_client is not None
             or self._minimax_client is not None
             or self._codex_client is not None
+            or self._custom_client is not None
         )
 
     def close(self) -> None:
@@ -1507,6 +1711,10 @@ class CloudEngine(InferenceEngine):
             self._minimax_client = None
         if self._codex_client is not None:
             self._codex_client = None
+        if self._custom_client is not None:
+            if hasattr(self._custom_client, "close"):
+                self._custom_client.close()
+            self._custom_client = None
 
 
 __all__ = ["CloudEngine", "PRICING", "_annotate_anthropic_cache", "estimate_cost"]

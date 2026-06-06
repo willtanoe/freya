@@ -107,16 +107,31 @@ def serve(
     sec = setup_security(config, engine, bus)
     engine = sec.engine
 
-    # If cloud API keys are set, wrap with MultiEngine so both local
-    # and cloud models appear in the model list and can be used.
+    # If cloud API keys are set (env or ~/.freya/cloud-keys.env), wrap with
+    # MultiEngine so both local and cloud models appear in the model picker.
     import os
+    from pathlib import Path
 
-    _has_cloud = (
-        os.environ.get("OPENAI_API_KEY")
-        or os.environ.get("ANTHROPIC_API_KEY")
-        or os.environ.get("GEMINI_API_KEY")
-        or os.environ.get("GOOGLE_API_KEY")
-        or os.environ.get("OPENROUTER_API_KEY")
+    _cloud_env: dict[str, str] = {}
+    _cloud_keys_file = Path.home() / ".freya" / "cloud-keys.env"
+    if _cloud_keys_file.exists():
+        for _raw in _cloud_keys_file.read_text().splitlines():
+            _line = _raw.strip()
+            if _line and not _line.startswith("#") and "=" in _line:
+                _k, _v = _line.split("=", 1)
+                _cloud_env[_k.strip()] = _v.strip()
+
+    _has_cloud = bool(
+        os.environ.get("OPENAI_API_KEY") or _cloud_env.get("OPENAI_API_KEY")
+        or os.environ.get("ANTHROPIC_API_KEY") or _cloud_env.get("ANTHROPIC_API_KEY")
+        or os.environ.get("GEMINI_API_KEY") or _cloud_env.get("GEMINI_API_KEY")
+        or os.environ.get("GOOGLE_API_KEY") or _cloud_env.get("GOOGLE_API_KEY")
+        or os.environ.get("OPENROUTER_API_KEY") or _cloud_env.get("OPENROUTER_API_KEY")
+        or os.environ.get("MINIMAX_API_KEY") or _cloud_env.get("MINIMAX_API_KEY")
+        or os.environ.get("OPENAI_CODEX_API_KEY") or _cloud_env.get("OPENAI_CODEX_API_KEY")
+        or ((os.environ.get("OPENAI_BASE_URL") or _cloud_env.get("OPENAI_BASE_URL"))
+            and (os.environ.get("CUSTOM_API_KEY") or _cloud_env.get("CUSTOM_API_KEY")
+                 or os.environ.get("OPENAI_API_KEY") or _cloud_env.get("OPENAI_API_KEY")))
     )
     if _has_cloud and engine_name != "cloud":
         try:

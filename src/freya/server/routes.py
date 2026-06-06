@@ -612,6 +612,19 @@ async def list_models(request: Request) -> ModelListResponse:
     include_cloud = request.query_params.get("include_cloud") == "1"
     if include_cloud:
         model_ids = list(all_ids)
+        # Fallback: if the engine doesn't have cloud models yet, try fetching
+        # them directly by creating a temporary CloudEngine.
+        if not any(is_cloud_model(m) for m in model_ids):
+            try:
+                from freya.engine.cloud import CloudEngine
+
+                cloud = CloudEngine()
+                cloud_models = cloud.list_models()
+                for m in cloud_models:
+                    if m not in model_ids:
+                        model_ids.append(m)
+            except Exception:
+                pass
     else:
         model_ids = [m for m in all_ids if not is_cloud_model(m)]
 
