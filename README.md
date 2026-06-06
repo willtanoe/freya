@@ -16,9 +16,9 @@ Freya is a community fork of **[OpenJarvis](https://github.com/open-jarvis/OpenJ
 
 Fork maintained by **[Willtanoe](https://github.com/willtanoe)**.
 
-## Cara Pakai
+## Usage
 
-### Install
+### Installation
 
 ```powershell
 # Windows
@@ -33,14 +33,14 @@ curl -fsSL https://willtanoe.github.io/freya/install.sh | bash
 ### Commands
 
 ```bash
-freya                          # mulai chat (default: chat-simple)
-freya ask "pertanyaan"         # tanya langsung
-freya serve                    # jalanin web server (localhost:8000)
-freya doctor                   # cek status
-freya init --preset <nama>     # ganti preset konfigurasi
+freya                          # start chatting (default: chat-simple)
+freya ask "your question"      # ask a single question
+freya serve                    # start web server (localhost:8000)
+freya doctor                   # check system status
+freya init --preset <name>     # switch configuration preset
 ```
 
-Preset yang tersedia: `chat-simple`, `code-assistant`, `deep-research`, `morning-digest-mac`, `morning-digest-linux`, `morning-digest-minimal`, `scheduled-monitor`
+Available presets: `chat-simple`, `code-assistant`, `deep-research`, `morning-digest-mac`, `morning-digest-linux`, `morning-digest-minimal`, `scheduled-monitor`
 
 ### Development
 
