@@ -80,6 +80,8 @@ interface Settings {
   temperature: number;
   maxTokens: number;
   speechEnabled: boolean;
+  // Onboarding: which inference mode was chosen ('local' | 'cloud' | undefined)
+  inferenceMode?: 'local' | 'cloud';
 }
 
 function loadSettings(): Settings {
@@ -93,6 +95,7 @@ function loadSettings(): Settings {
     temperature: 0.7,
     maxTokens: 4096,
     speechEnabled: false,
+    inferenceMode: undefined,
   };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);

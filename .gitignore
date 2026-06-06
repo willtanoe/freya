@@ -113,6 +113,7 @@ dogfood_report*.md
 # Second Repos
 Inline/
 scratch/
+project-summary.txt
 
 # ---------------------------------------------------------------------------
 # Distillation runtime artifacts (defense in depth — these should always live

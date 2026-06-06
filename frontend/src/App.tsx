@@ -16,17 +16,34 @@ import { fetchModels, fetchServerInfo, fetchSavings, submitSavings, isTauri } fr
 import { OptInModal } from './components/OptInModal';
 import { UpdateChecker } from './components/Desktop/UpdateChecker';
 import { track, hashId } from './lib/analytics';
+import { OnboardingFlow } from './components/setup/OnboardingFlow';
 
 export default function App() {
-  const [setupDone, setSetupDone] = useState(!isTauri());
-  const handleSetupReady = useCallback(() => {
-    setSetupDone(true);
-    // Only fire once per install — guard against setup screen re-appearing
-    // on reinstalls or dev reloads.
+  // Onboarding is done when: non-Tauri, or localStorage flag is set, or Settings has inferenceMode.
+  const settings = useAppStore((s) => s.settings);
+  const [setupDone, setSetupDone] = useState(
+    !isTauri() || !!settings.inferenceMode || !!localStorage.getItem('oj-setup-completed'),
+  );
+  const [showSetupScreen, setShowSetupScreen] = useState(false);
+
+  // After onboarding choice, if local mode was selected, show the Ollama setup screen.
+  const handleOnboardingComplete = useCallback(() => {
     if (!localStorage.getItem('oj-setup-completed')) {
       localStorage.setItem('oj-setup-completed', '1');
       track('setup_completed', { preset: 'default' });
     }
+    // If local mode, also show the Ollama setup screen first.
+    // Otherwise go straight to the main app.
+    if (settings.inferenceMode === 'local') {
+      setShowSetupScreen(true);
+    } else {
+      setSetupDone(true);
+    }
+  }, [settings.inferenceMode]);
+
+  const handleSetupReady = useCallback(() => {
+    setShowSetupScreen(false);
+    setSetupDone(true);
   }, []);
   const prevModelRef = useRef<string>('');
   const setModels = useAppStore((s) => s.setModels);
@@ -35,7 +52,6 @@ export default function App() {
   const selectedModel = useAppStore((s) => s.selectedModel);
   const setServerInfo = useAppStore((s) => s.setServerInfo);
   const setSavings = useAppStore((s) => s.setSavings);
-  const settings = useAppStore((s) => s.settings);
   const commandPaletteOpen = useAppStore((s) => s.commandPaletteOpen);
   const setCommandPaletteOpen = useAppStore((s) => s.setCommandPaletteOpen);
   const optInEnabled = useAppStore((s) => s.optInEnabled);
@@ -176,7 +192,13 @@ export default function App() {
   }, [commandPaletteOpen, setCommandPaletteOpen, toggleSystemPanel]);
 
 
+  // Show onboarding flow first (Local vs Cloud choice)
   if (!setupDone) {
+    return <OnboardingFlow onComplete={handleOnboardingComplete} />;
+  }
+
+  // After onboarding, if local mode was selected, show Ollama setup screen
+  if (showSetupScreen) {
     return <SetupScreen onReady={handleSetupReady} />;
   }
 
