@@ -805,6 +805,28 @@ export async function fetchAgentTrace(agentId: string, traceId: string): Promise
 }
 
 // ---------------------------------------------------------------------------
+// Sessions
+// ---------------------------------------------------------------------------
+
+export interface SessionInfo {
+  session_id?: string;
+  id?: string;
+  model?: string;
+  started_at?: number;
+  updated_at?: number;
+  message_count?: number;
+  total_tokens?: number;
+  [key: string]: unknown;
+}
+
+export async function fetchSessions(limit: number = 20): Promise<SessionInfo[]> {
+  let res = await apiFetch(`/v1/sessions?limit=${limit}`);
+  if (!res.ok) throw new Error(`Failed: ${res.status}`);
+  const data = await res.json();
+  return data.sessions || [];
+}
+
+// ---------------------------------------------------------------------------
 // Leaderboard savings submission (Supabase)
 // ---------------------------------------------------------------------------
 
