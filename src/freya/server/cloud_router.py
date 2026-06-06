@@ -397,4 +397,18 @@ async def stream_cloud(
             yield token
 
     else:
-        raise ValueError(f"Unknown cloud provider for model: {model!r}")
+        # Custom OpenAI-compatible endpoint (e.g. DeepSeek, xAI, local LLM)
+        custom_base = os.environ.get("OPENAI_BASE_URL", "")
+        custom_key = _load_keys().get("OPENAI_API_KEY", "")
+        if custom_base and custom_key:
+            async for token in _stream_openai(
+                model,
+                messages,
+                temperature,
+                max_tokens,
+                base_url=custom_base.rstrip("/"),
+                api_key_name="OPENAI_API_KEY",
+            ):
+                yield token
+        else:
+            raise ValueError(f"Unknown cloud provider for model: {model!r}")
