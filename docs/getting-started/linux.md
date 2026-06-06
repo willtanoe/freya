@@ -27,4 +27,4 @@ The installer auto-detects via `nvidia-smi` / `rocm-smi`. Datacenter cards (A100
 
 ## See also
 
-- [Full installer reference](install.md)
+- [Full installer reference](installation.md)

@@ -608,5 +608,3 @@ Every edit is assigned a tier from a deterministic lookup table:
 | `auto` | Model routing/params, tool add/remove/description, agent params | Apply if gate passes |
 | `review` | System prompt edits, agent class, few-shot exemplars | Queue for user approval |
 | `manual` | LoRA fine-tuning (v2) | Never auto-apply |
-
-See [LLM-guided spec search guide](../user-guide/llm-guided-spec-search.md) for the architecture and the building blocks.

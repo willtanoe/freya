@@ -23,4 +23,4 @@ xcode-select --install
 
 ## See also
 
-- [Full installer reference](install.md)
+- [Full installer reference](installation.md)

@@ -223,8 +223,7 @@ pass-through commands map to Pearl's native binaries:
 | `freya pearl address` | `prlctl --wallet getnewaddress` | Generate a wallet address from Oyster |
 
 Use `PEARL_HOME=/path/to/pearl` or `--pearl-home /path/to/pearl` if Pearl's
-`bin/` directory is not on `PATH`. See the [Pearl CLI guide](pearl.md) for
-examples.
+`bin/` directory is not on `PATH`.
 
 ---
 
@@ -470,7 +469,4 @@ is exposed as a Python library only — there is currently no top-level
 `freya` subcommand for it. Construct a `SpecSearchOrchestrator`
 directly from `freya.learning.spec_search.orchestrator` and call
 `.run(trigger)` with a trigger from
-`freya.learning.spec_search.triggers`. See
-[`docs/user-guide/llm-guided-spec-search.md`](llm-guided-spec-search.md)
-for the architecture and the building blocks
-(`splits.py`, external corpora, `external_adapter`).
+`freya.learning.spec_search.triggers`.

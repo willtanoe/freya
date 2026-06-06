@@ -80,4 +80,4 @@ systemd / launchd.
 ## See also
 
 - [WSL2 install](wsl2.md) — the recommended Windows path.
-- [Full installer reference](install.md).
+- [Full installer reference](installation.md).

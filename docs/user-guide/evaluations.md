@@ -14,7 +14,7 @@ The Freya evaluation framework (`freya-evals`) measures model **correctness and 
 
 ---
 
-> **Tip:** LLM-guided spec search uses this same eval infrastructure to gate edits against your personal benchmark. See [LLM-guided spec search](llm-guided-spec-search.md).
+> **Tip:** LLM-guided spec search uses this same eval infrastructure to gate edits against your personal benchmark. 
 
 ## Installation
 

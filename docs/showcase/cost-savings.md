@@ -10,7 +10,7 @@ description: A leaderboard that tells you exactly how much you saved by running 
   <figcaption>The public leaderboard. The bar on the right is what a month of my Freya usage would have cost on the cloud — measured per-query, not estimated.</figcaption>
 </figure>
 
-Freya tracks every inference call you make — the tokens, the latency, the GPU energy — and computes what that same call *would have cost* on OpenAI, Anthropic, Google, and Bedrock. There's a public leaderboard at **[/leaderboard](../leaderboard.md)** where anyone running Freya can opt in and watch their savings rack up.
+Freya tracks every inference call you make — the tokens, the latency, the GPU energy — and computes what that same call *would have cost* on OpenAI, Anthropic, Google, and Bedrock. There's a public leaderboard where anyone running Freya can opt in and watch their savings rack up.
 
 My current month is roughly:
 
@@ -31,8 +31,6 @@ The dollar number is the hook. The bottom row is the actual reason I run Freya.
 
 ## How I set this up
 
-You don't, really — it's on by default. Every `freya ask`, `freya serve` request, and channel-routed message is metered by the [telemetry system](../telemetry.md). To opt your savings into the public leaderboard:
+You don't, really — it's on by default. Every `freya ask`, `freya serve` request, and channel-routed message is metered by the [telemetry system](../user-guide/telemetry.md). To opt your savings into the public leaderboard:
 
-→ **[Leaderboard guide](../leaderboard.md)** — one command to opt in, one command to opt out. Telemetry is local-only by default.
-
-→ **[Telemetry overview](../telemetry.md)** — what's measured, where it's stored, and how to inspect it yourself with `freya telemetry`.
+→ **[Telemetry overview](../user-guide/telemetry.md)** — what's measured, where it's stored, and how to inspect it yourself with `freya telemetry`.

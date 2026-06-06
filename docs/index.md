@@ -77,7 +77,7 @@ Freya is that stack. It is a framework for local-first personal AI, built around
 
     [Download for macOS](https://github.com/willtanoe/freya/releases/download/desktop-v1.0.2/Freya_1.0.1_universal.dmg){ .md-button .md-button--primary }
 
-    Also available for [Windows](https://github.com/willtanoe/freya/releases/download/desktop-v1.0.2/Freya_1.0.1_x64-setup.exe), [Linux (DEB)](https://github.com/willtanoe/freya/releases/download/desktop-v1.0.2/Freya_1.0.1_amd64.deb), and [Linux (RPM)](https://github.com/willtanoe/freya/releases/download/desktop-v1.0.2/Freya-1.0.1-1.x86_64.rpm). See the [Downloads](downloads.md) page for details.
+    Also available for [Windows](https://github.com/willtanoe/freya/releases/download/desktop-v1.0.2/Freya_1.0.1_x64-setup.exe), [Linux (DEB)](https://github.com/willtanoe/freya/releases/download/desktop-v1.0.2/Freya_1.0.1_amd64.deb), and [Linux (RPM)](https://github.com/willtanoe/freya/releases/download/desktop-v1.0.2/Freya-1.0.1-1.x86_64.rpm). See the [Downloads](https://github.com/willtanoe/freya/releases) page for details.
 
     The app connects to `http://localhost:8000` automatically.
 
@@ -211,8 +211,7 @@ Freya is built around five composable layers. Each has a clean interface and can
     ---
 
     Docker, systemd, launchd. GPU-accelerated container images.
-
--   **[Development](development/contributing.md)**
+
 
     ---
 
