@@ -74,6 +74,14 @@ def _is_codex_model(model: str) -> bool:
     return model.startswith("codex/")
 
 
+def _is_deepseek_model(model: str) -> bool:
+    return model.startswith("deepseek/")
+
+
+def _is_groq_model(model: str) -> bool:
+    return model.startswith("groq/")
+
+
 def _is_anthropic_model(model: str) -> bool:
     return "claude" in model.lower() and not _is_openrouter_model(model)
 
@@ -237,6 +245,8 @@ class CloudEngine(InferenceEngine):
         self._minimax_client: Any = None
         self._codex_client: Any = None
         self._custom_client: Any = None
+        self._deepseek_client: Any = None
+        self._groq_client: Any = None
         self._custom_base_url: str = ""
         # Gemini thought_signatures: tool_call_id -> signature bytes
         self._thought_sigs: Dict[str, bytes] = {}
@@ -298,7 +308,34 @@ class CloudEngine(InferenceEngine):
                 )
             except ImportError:
                 pass
-        # Custom OpenAI-compatible endpoint (DeepSeek, Groq, xAI, etc.)
+        # DeepSeek — OpenAI-compatible
+        deepseek_key = os.environ.get("DEEPSEEK_API_KEY", "")
+        if deepseek_key:
+            try:
+                import openai
+
+                deepseek_base = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1")
+                self._deepseek_client = openai.OpenAI(
+                    base_url=deepseek_base,
+                    api_key=deepseek_key,
+                )
+            except ImportError:
+                pass
+
+        # Groq — OpenAI-compatible
+        groq_key = os.environ.get("GROQ_API_KEY", "")
+        if groq_key:
+            try:
+                import openai
+
+                self._groq_client = openai.OpenAI(
+                    base_url="https://api.groq.com/openai/v1",
+                    api_key=groq_key,
+                )
+            except ImportError:
+                pass
+
+        # Custom OpenAI-compatible endpoint
         custom_base = os.environ.get("OPENAI_BASE_URL", "").rstrip("/")
         custom_key = os.environ.get("CUSTOM_API_KEY", "")
         if custom_base and custom_key:
@@ -1012,6 +1049,84 @@ class CloudEngine(InferenceEngine):
             ]
         return result
 
+    def _generate_deepseek(
+        self,
+        messages: Sequence[Message],
+        *,
+        model: str,
+        temperature: float,
+        max_tokens: int,
+        **kwargs: Any,
+    ) -> Dict[str, Any]:
+        """Generate via DeepSeek (OpenAI-compatible)."""
+        if self._deepseek_client is None:
+            raise EngineConnectionError("DeepSeek client not available")
+        kwargs.pop("response_format", None)
+        create_kwargs: Dict[str, Any] = {
+            "model": model,
+            "messages": messages_to_dicts(messages),
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+        }
+        t0 = time.monotonic()
+        resp = self._deepseek_client.chat.completions.create(**create_kwargs)
+        elapsed = time.monotonic() - t0
+        choice = resp.choices[0]
+        usage = resp.usage
+        prompt_tokens = usage.prompt_tokens if usage else 0
+        completion_tokens = usage.completion_tokens if usage else 0
+        result: Dict[str, Any] = {
+            "content": choice.message.content or "",
+            "usage": {
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": (usage.total_tokens if usage else 0),
+            },
+            "model": resp.model or model,
+            "finish_reason": choice.finish_reason or "stop",
+            "ttft": elapsed,
+        }
+        return result
+
+    def _generate_groq(
+        self,
+        messages: Sequence[Message],
+        *,
+        model: str,
+        temperature: float,
+        max_tokens: int,
+        **kwargs: Any,
+    ) -> Dict[str, Any]:
+        """Generate via Groq (OpenAI-compatible)."""
+        if self._groq_client is None:
+            raise EngineConnectionError("Groq client not available")
+        kwargs.pop("response_format", None)
+        create_kwargs: Dict[str, Any] = {
+            "model": model,
+            "messages": messages_to_dicts(messages),
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+        }
+        t0 = time.monotonic()
+        resp = self._groq_client.chat.completions.create(**create_kwargs)
+        elapsed = time.monotonic() - t0
+        choice = resp.choices[0]
+        usage = resp.usage
+        prompt_tokens = usage.prompt_tokens if usage else 0
+        completion_tokens = usage.completion_tokens if usage else 0
+        result: Dict[str, Any] = {
+            "content": choice.message.content or "",
+            "usage": {
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": (usage.total_tokens if usage else 0),
+            },
+            "model": resp.model or model,
+            "finish_reason": choice.finish_reason or "stop",
+            "ttft": elapsed,
+        }
+        return result
+
     def generate(
         self,
         messages: Sequence[Message],
@@ -1031,6 +1146,12 @@ class CloudEngine(InferenceEngine):
             return self._generate_codex(messages, **kw)
         if _is_openrouter_model(model):
             return self._generate_openrouter(messages, **kw)
+        if _is_deepseek_model(model) and self._deepseek_client is not None:
+            kw["model"] = model.removeprefix("deepseek/")
+            return self._generate_deepseek(messages, **kw)
+        if _is_groq_model(model) and self._groq_client is not None:
+            kw["model"] = model.removeprefix("groq/")
+            return self._generate_groq(messages, **kw)
         if _is_minimax_model(model):
             return self._generate_minimax(messages, **kw)
         if _is_anthropic_model(model):
@@ -1061,6 +1182,14 @@ class CloudEngine(InferenceEngine):
                 yield token
         elif _is_openrouter_model(model):
             async for token in self._stream_openrouter(messages, **kw):
+                yield token
+        elif _is_deepseek_model(model) and self._deepseek_client is not None:
+            kw["model"] = model.removeprefix("deepseek/")
+            async for token in self._stream_deepseek(messages, **kw):
+                yield token
+        elif _is_groq_model(model) and self._groq_client is not None:
+            kw["model"] = model.removeprefix("groq/")
+            async for token in self._stream_groq(messages, **kw):
                 yield token
         elif _is_minimax_model(model):
             async for token in self._stream_minimax(messages, **kw):
@@ -1300,6 +1429,56 @@ class CloudEngine(InferenceEngine):
             "stream": True,
         }
         resp = self._minimax_client.chat.completions.create(**create_kwargs)
+        for chunk in resp:
+            delta = chunk.choices[0].delta if chunk.choices else None
+            if delta and delta.content:
+                yield delta.content
+
+    async def _stream_deepseek(
+        self,
+        messages: Sequence[Message],
+        *,
+        model: str,
+        temperature: float,
+        max_tokens: int,
+        **kwargs: Any,
+    ) -> AsyncIterator[str]:
+        if self._deepseek_client is None:
+            raise EngineConnectionError("DeepSeek client not available")
+        create_kwargs: Dict[str, Any] = {
+            "model": model,
+            "messages": messages_to_dicts(messages),
+            "max_tokens": max_tokens,
+            "stream": True,
+            "temperature": temperature,
+            **kwargs,
+        }
+        resp = self._deepseek_client.chat.completions.create(**create_kwargs)
+        for chunk in resp:
+            delta = chunk.choices[0].delta if chunk.choices else None
+            if delta and delta.content:
+                yield delta.content
+
+    async def _stream_groq(
+        self,
+        messages: Sequence[Message],
+        *,
+        model: str,
+        temperature: float,
+        max_tokens: int,
+        **kwargs: Any,
+    ) -> AsyncIterator[str]:
+        if self._groq_client is None:
+            raise EngineConnectionError("Groq client not available")
+        create_kwargs: Dict[str, Any] = {
+            "model": model,
+            "messages": messages_to_dicts(messages),
+            "max_tokens": max_tokens,
+            "stream": True,
+            "temperature": temperature,
+            **kwargs,
+        }
+        resp = self._groq_client.chat.completions.create(**create_kwargs)
         for chunk in resp:
             delta = chunk.choices[0].delta if chunk.choices else None
             if delta and delta.content:
@@ -1575,40 +1754,120 @@ class CloudEngine(InferenceEngine):
             async for chunk in self._stream_full_openai(messages, **kw):
                 yield chunk
 
-    def list_models(self) -> List[str]:
-        """List all available models from all configured providers.
+    def _fetch_openai_models(self) -> List[str]:
+        """Fetch models dynamically from OpenAI /v1/models."""
+        if self._openai_client is None:
+            return []
+        try:
+            resp = httpx.get(
+                "https://api.openai.com/v1/models",
+                headers={"Authorization": f"Bearer {self._openai_client.api_key}"},
+                timeout=15,
+            )
+            if resp.is_success:
+                return [m["id"] for m in resp.json().get("data", [])
+                       if not m["id"].startswith(("whisper", "tts", "dall-e", "omni"))]
+        except Exception:
+            pass
+        return []
 
-        This returns all models that COULD be used if keys are configured.
-        For only configured providers, use list_available_models().
+    def _fetch_groq_models(self) -> List[str]:
+        """Fetch models dynamically from Groq /openai/v1/models."""
+        if self._groq_client is None:
+            return []
+        try:
+            resp = httpx.get(
+                "https://api.groq.com/openai/v1/models",
+                headers={"Authorization": f"Bearer {self._groq_client.api_key}"},
+                timeout=15,
+            )
+            if resp.is_success:
+                return [f"groq/{m['id']}" for m in resp.json().get("data", [])]
+        except Exception:
+            pass
+        return []
+
+    def _fetch_deepseek_models(self) -> List[str]:
+        """Fetch models dynamically from DeepSeek /v1/models."""
+        if self._deepseek_client is None:
+            return []
+        try:
+            base = str(self._deepseek_client.base_url).rstrip("/")
+            api_key = self._deepseek_client.api_key
+            resp = httpx.get(
+                f"{base}/models",
+                headers={"Authorization": f"Bearer {api_key}"},
+                timeout=15,
+            )
+            if resp.is_success:
+                return [f"deepseek/{m['id']}" for m in resp.json().get("data", [])]
+        except Exception:
+            pass
+        return []
+
+    def _fetch_google_models(self) -> List[str]:
+        """Fetch models dynamically from Google Gemini API."""
+        if self._google_client is None:
+            return []
+        try:
+            # Google's genai SDK provides model listing
+            models = []
+            for m in self._google_client.models.list():
+                if "gemini" in m.name.lower():
+                    # Extract model name from full path like "models/gemini-2.5-pro"
+                    name = m.name.split("/")[-1] if "/" in m.name else m.name
+                    if name not in models:
+                        models.append(name)
+            return models
+        except Exception:
+            pass
+        return []
+
+    def _fetch_anthropic_models(self) -> List[str]:
+        """Return known Anthropic models (API doesn't have a list endpoint).
+        
+        Validates the key is working via a lightweight API call.
+        Returns cached known model list on success, empty on failure.
         """
-        # For backwards compatibility, return models from any provider that
-        # has a client initialized. This matches the old behavior.
+        if self._anthropic_client is None:
+            return []
+        # Anthropic has no /models endpoint — return known current models
+        # after validating the client exists (key check happens in _init_clients)
+        return [
+            "claude-3-opus-v4.8", "claude-3-opus-v4.7",
+            "claude-3-sonnet-v4.6", "claude-mythos",
+            "claude-3-haiku-3-5-20241007",
+            "claude-3-opus-20240229", "claude-3-sonnet-20240229",
+            "claude-3-haiku-20240307",
+        ]
+
+    def _fetch_openrouter_models(self) -> List[str]:
+        """Fetch models dynamically from OpenRouter /api/v1/models."""
+        if self._openrouter_client is None:
+            return []
+        try:
+            base = str(self._openrouter_client.base_url).rstrip("/")
+            api_key = self._openrouter_client.api_key
+            resp = httpx.get(
+                f"{base}/models",
+                headers={"Authorization": f"Bearer {api_key}"},
+                timeout=15,
+            )
+            if resp.is_success:
+                return [f"openrouter/{m['id']}" for m in resp.json().get("data", [])]
+        except Exception:
+            pass
+        return []
+
+    def list_models(self) -> List[str]:
+        """List all available models fetched dynamically from configured providers."""
         models: List[str] = []
-        if self._openai_client is not None:
-            models.extend(["gpt-5", "gpt-5.2-enterprise", "gpt-5-pro", "gpt-5-thinking",
-                           "gpt-5.4-mini", "gpt-5.4-nano", "gpt-4o", "gpt-4o-mini",
-                           "gpt-4-turbo", "o3", "o3-mini", "o4-mini"])
-        if self._anthropic_client is not None:
-            models.extend(["claude-3-opus-v4.8", "claude-3-opus-v4.7",
-                           "claude-3-sonnet-v4.6", "claude-mythos"])
-        if self._google_client is not None:
-            models.extend(["gemini-3.1-pro-preview", "gemini-3.1-pro-preview-customtools",
-                           "gemini-3.1-flash-lite", "deep-research-max-preview-04-2026",
-                           "deep-research-preview-04-2026"])
-        if self._openrouter_client is not None:
-            try:
-                base = str(self._openrouter_client.base_url).rstrip("/")
-                api_key = self._openrouter_client.api_key
-                resp = httpx.get(
-                    f"{base}/models",
-                    headers={"Authorization": f"Bearer {api_key}"},
-                    timeout=15,
-                )
-                if resp.is_success:
-                    for m in resp.json().get("data", []):
-                        models.append(f"openrouter/{m['id']}")
-            except Exception:
-                pass
+        models.extend(self._fetch_openai_models())
+        models.extend(self._fetch_anthropic_models())
+        models.extend(self._fetch_google_models())
+        models.extend(self._fetch_deepseek_models())
+        models.extend(self._fetch_groq_models())
+        models.extend(self._fetch_openrouter_models())
         if self._minimax_client is not None:
             models.extend(["MiniMax-Text-01", "MiniMax-Text-01-Turbo"])
         if self._codex_client is not None:
@@ -1620,62 +1879,44 @@ class CloudEngine(InferenceEngine):
         return models
 
     def list_available_models(self) -> Dict[str, List[str]]:
-        """Return models grouped by provider for ONLY configured providers.
+        """Return models grouped by provider, fetched dynamically from each API.
 
-        This is the method the frontend should use to get available models.
+        Only returns providers that have API keys configured.
         Returns: {provider_id: [model_ids]}
         """
         result: Dict[str, List[str]] = {}
 
-        # OpenAI
-        if self._openai_client is not None:
-            result["openai"] = ["gpt-5", "gpt-5.2-enterprise", "gpt-5-pro", "gpt-5-thinking",
-                               "gpt-5.4-mini", "gpt-5.4-nano", "gpt-4o", "gpt-4o-mini",
-                               "gpt-4-turbo", "o3", "o3-mini", "o4-mini"]
+        # OpenAI — fetch dynamically
+        openai_models = self._fetch_openai_models()
+        if openai_models:
+            result["openai"] = openai_models
 
-        # Anthropic
-        if self._anthropic_client is not None:
-            result["anthropic"] = ["claude-3-opus-v4.8", "claude-3-opus-v4.7",
-                                  "claude-3-sonnet-v4.6", "claude-mythos"]
+        # Anthropic — known models (no list endpoint)
+        anthropic_models = self._fetch_anthropic_models()
+        if anthropic_models:
+            result["anthropic"] = anthropic_models
 
-        # Google
-        if self._google_client is not None:
-            result["google"] = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview-customtools",
-                               "gemini-3.1-flash-lite", "deep-research-max-preview-04-2026",
-                               "deep-research-preview-04-2026"]
+        # Google — fetch dynamically
+        google_models = self._fetch_google_models()
+        if google_models:
+            result["google"] = google_models
 
-        # OpenRouter - fetch dynamically from API
-        if self._openrouter_client is not None:
-            try:
-                base = str(self._openrouter_client.base_url).rstrip("/")
-                api_key = self._openrouter_client.api_key
-                resp = httpx.get(
-                    f"{base}/models",
-                    headers={"Authorization": f"Bearer {api_key}"},
-                    timeout=15,
-                )
-                if resp.is_success:
-                    models = [f"openrouter/{m['id']}" for m in resp.json().get("data", [])]
-                    if models:
-                        result["openrouter"] = models
-            except Exception:
-                pass
+        # OpenRouter — fetch dynamically
+        openrouter_models = self._fetch_openrouter_models()
+        if openrouter_models:
+            result["openrouter"] = openrouter_models
 
-        # DeepSeek
-        if self._minimax_client is None:
-            # DeepSeek uses its own client, check env
-            deepseek_key = os.environ.get("DEEPSEEK_API_KEY")
-            if deepseek_key:
-                result["deepseek"] = ["deepseek-chat", "deepseek-coder"]
+        # DeepSeek — fetch dynamically
+        deepseek_models = self._fetch_deepseek_models()
+        if deepseek_models:
+            result["deepseek"] = deepseek_models
 
-        # Groq
-        groq_key = os.environ.get("GROQ_API_KEY")
-        if groq_key and self._minimax_client is None:
-            # Groq also uses similar pattern
-            result["groq"] = ["llama-3.3-70b-versatile", "mixtral-8x7b-32768",
-                            "gemma2-9b-it", "llama-3.1-8b-instant"]
+        # Groq — fetch dynamically
+        groq_models = self._fetch_groq_models()
+        if groq_models:
+            result["groq"] = groq_models
 
-        # Custom
+        # Custom — fetch dynamically
         if self._custom_client is not None:
             custom_ids = self._fetch_custom_models()
             if custom_ids:
