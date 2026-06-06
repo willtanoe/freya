@@ -130,8 +130,7 @@ def serve(
         or os.environ.get("MINIMAX_API_KEY") or _cloud_env.get("MINIMAX_API_KEY")
         or os.environ.get("OPENAI_CODEX_API_KEY") or _cloud_env.get("OPENAI_CODEX_API_KEY")
         or ((os.environ.get("OPENAI_BASE_URL") or _cloud_env.get("OPENAI_BASE_URL"))
-            and (os.environ.get("CUSTOM_API_KEY") or _cloud_env.get("CUSTOM_API_KEY")
-                 or os.environ.get("OPENAI_API_KEY") or _cloud_env.get("OPENAI_API_KEY")))
+            and (os.environ.get("CUSTOM_API_KEY") or _cloud_env.get("CUSTOM_API_KEY")))
     )
     if _has_cloud and engine_name != "cloud":
         try:

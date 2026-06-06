@@ -402,9 +402,9 @@ async def stream_cloud(
             yield token
 
     elif provider == "custom":
-        custom_base = os.environ.get("OPENAI_BASE_URL", "")
         keys = _load_keys()
-        custom_key = keys.get("CUSTOM_API_KEY") or keys.get("OPENAI_API_KEY", "")
+        custom_base = keys.get("OPENAI_BASE_URL", "")
+        custom_key = keys.get("CUSTOM_API_KEY", "")
         if not custom_base or not custom_key:
             raise ValueError("Custom provider not configured — set Base URL + API Key in Settings")
         actual_model = model.removeprefix("custom/")

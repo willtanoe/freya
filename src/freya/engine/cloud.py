@@ -346,7 +346,7 @@ class CloudEngine(InferenceEngine):
                 pass
         # Custom OpenAI-compatible endpoint (DeepSeek, Groq, xAI, etc.)
         custom_base = os.environ.get("OPENAI_BASE_URL", "").rstrip("/")
-        custom_key = os.environ.get("CUSTOM_API_KEY") or os.environ.get("OPENAI_API_KEY", "")
+        custom_key = os.environ.get("CUSTOM_API_KEY", "")
         if custom_base and custom_key:
             try:
                 import openai
@@ -1083,7 +1083,7 @@ class CloudEngine(InferenceEngine):
             return self._generate_anthropic(messages, **kw)
         if _is_google_model(model):
             return self._generate_google(messages, **kw)
-        if self._custom_client is not None:
+        if model.startswith("custom/") and self._custom_client is not None:
             return self._generate_custom(messages, **kw)
         return self._generate_openai(messages, **kw)
 
@@ -1117,7 +1117,7 @@ class CloudEngine(InferenceEngine):
         elif _is_google_model(model):
             async for token in self._stream_google(messages, **kw):
                 yield token
-        elif self._custom_client is not None:
+        elif model.startswith("custom/") and self._custom_client is not None:
             async for token in self._stream_custom(messages, **kw):
                 yield token
         else:
@@ -1605,7 +1605,16 @@ class CloudEngine(InferenceEngine):
         elif _is_google_model(model):
             async for chunk in super().stream_full(messages, **kw):
                 yield chunk
-        elif self._custom_client is not None:
+        elif _is_codex_model(model):
+            async for chunk in super().stream_full(messages, **kw):
+                yield chunk
+        elif _is_openrouter_model(model):
+            async for chunk in self._stream_full_openai(messages, **kw):
+                yield chunk
+        elif _is_minimax_model(model):
+            async for chunk in self._stream_full_openai(messages, **kw):
+                yield chunk
+        elif model.startswith("custom/") and self._custom_client is not None:
             async for chunk in self._stream_full_custom(messages, **kw):
                 yield chunk
         else:
