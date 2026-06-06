@@ -483,27 +483,6 @@ export function SettingsPage() {
                   <span className="text-[10px] w-14" style={{ color: 'var(--color-text-tertiary)' }}>API Key</span>
                   <ApiKeyInput storageKey="freya-custom-key" placeholder="sk-..." envKey="CUSTOM_API_KEY" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] w-14" style={{ color: 'var(--color-text-tertiary)' }}>Models</span>
-                  <input
-                    type="text"
-                    placeholder="deepseek-chat, deepseek-reasoner"
-                    className="w-56 px-2 py-1 rounded text-xs"
-                    style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
-                    defaultValue={(() => { try { return localStorage.getItem('freya-custom-models') || ''; } catch { return ''; } })()}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      try { if (v) localStorage.setItem('freya-custom-models', v); else localStorage.removeItem('freya-custom-models'); } catch {}
-                      try {
-                        fetch('/v1/cloud/keys', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ keys: { CUSTOM_MODELS: v || '' } }),
-                        });
-                      } catch {}
-                    }}
-                  />
-                </div>
               </div>
             </SettingRow>
           </Section>

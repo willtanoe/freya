@@ -85,18 +85,6 @@ _MINIMAX_MODELS = [
     "MiniMax-M2.5-highspeed",
 ]
 
-# OpenRouter models — prefixed with "openrouter/" so they can be identified
-_OPENROUTER_POPULAR = [
-    "openrouter/auto",
-    "openrouter/openai/gpt-4o",
-    "openrouter/anthropic/claude-sonnet-4",
-    "openrouter/google/gemini-2.5-pro",
-    "openrouter/meta-llama/llama-3.3-70b-instruct",
-    "openrouter/mistralai/mistral-large",
-    "openrouter/deepseek/deepseek-r1",
-    "openrouter/qwen/qwen3-235b-a22b",
-]
-
 # Codex models — prefixed with "codex/" for ChatGPT Plus/Pro subscribers.
 # Uses the Responses API at chatgpt.com, not the standard OpenAI API.
 _CODEX_MODELS = [
@@ -1643,10 +1631,8 @@ class CloudEngine(InferenceEngine):
                 if resp.is_success:
                     for m in resp.json().get("data", []):
                         models.append(f"openrouter/{m['id']}")
-                else:
-                    models.extend(_OPENROUTER_POPULAR)
             except Exception:
-                models.extend(_OPENROUTER_POPULAR)
+                pass
         if self._minimax_client is not None:
             models.extend(_MINIMAX_MODELS)
         if self._codex_client is not None:
@@ -1658,30 +1644,32 @@ class CloudEngine(InferenceEngine):
         return models
 
     def _fetch_custom_models(self) -> List[str]:
-        """Try /v1/models on the custom endpoint, prefix with custom/.
+        """Try /models and /v1/models on the custom endpoint, prefix with custom/.
         
-        Falls back to CUSTOM_MODELS env if the endpoint does not respond.
+        Falls back to CUSTOM_MODELS env if neither endpoint responds.
         """
-        try:
-            import httpx
+        api_key = self._custom_client.api_key
+        base = self._custom_base_url
 
-            base = self._custom_base_url
-            api_key = self._custom_client.api_key
-            resp = httpx.get(
-                f"{base}/models",
-                headers={"Authorization": f"Bearer {api_key}"},
-                timeout=15,
-            )
-            if resp.is_success:
-                ids: List[str] = []
-                for m in resp.json().get("data", []):
-                    mid = m.get("id", "")
-                    if mid:
-                        ids.append(f"custom/{mid}")
-                if ids:
-                    return ids
-        except Exception:
-            pass
+        for path in ("/models", "/v1/models"):
+            try:
+                import httpx
+
+                resp = httpx.get(
+                    f"{base}{path}",
+                    headers={"Authorization": f"Bearer {api_key}"},
+                    timeout=15,
+                )
+                if resp.is_success:
+                    ids: List[str] = []
+                    for m in resp.json().get("data", []):
+                        mid = m.get("id", "")
+                        if mid:
+                            ids.append(f"custom/{mid}")
+                    if ids:
+                        return ids
+            except Exception:
+                continue
         # Fallback to user-defined model list
         custom_str = os.environ.get("CUSTOM_MODELS", "")
         if custom_str:
