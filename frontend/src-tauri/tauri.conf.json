@@ -40,8 +40,8 @@
       "icons/icon.png"
     ],
     "category": "Utility",
-    "shortDescription": "On-device AI assistant with energy monitoring and trace debugging",
-    "longDescription": "Freya Desktop wraps the Freya research framework in a native desktop application with real-time energy monitoring, trace debugging, learning curve visualization, and memory browsing.",
+    "shortDescription": "Cloud-first AI assistant — connect your API keys and chat",
+    "longDescription": "Freya Desktop is a cloud-first AI assistant. Connect your OpenAI, Anthropic, DeepSeek, Groq, or OpenRouter API keys. Models are fetched dynamically from each provider.",
     "macOS": {
       "entitlements": "Entitlements.plist",
       "minimumSystemVersion": "10.15",
