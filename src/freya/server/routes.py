@@ -599,18 +599,12 @@ async def _handle_stream(
 
 @router.get("/v1/models")
 async def list_models(request: Request) -> ModelListResponse:
-    """List available models — cloud-first, fetched dynamically from configured providers."""
-    engine = request.app.state.engine
-    model_ids = engine.list_models()
+    """List available models — always fresh from CloudEngine to pick up new keys."""
+    from freya.engine.cloud import CloudEngine
 
-    # Fallback: if engine returns nothing, fetch directly from CloudEngine
-    if not model_ids:
-        try:
-            from freya.engine.cloud import CloudEngine
-            cloud = CloudEngine()
-            model_ids = cloud.list_models()
-        except Exception:
-            pass
+    # Always create a fresh CloudEngine so newly configured keys are visible
+    cloud = CloudEngine()
+    model_ids = cloud.list_models()
 
     return ModelListResponse(
         data=[ModelObject(id=mid) for mid in model_ids],
@@ -1027,20 +1021,22 @@ async def configure_provider(request: Request):
     if not provider_id or not api_key:
         raise HTTPException(status_code=400, detail="provider_id and api_key are required")
 
-    # Map provider_id to env var name
+    # Map provider_id to env var name and base URL var
     env_var_map = {
-        "openai": "OPENAI_API_KEY",
-        "anthropic": "ANTHROPIC_API_KEY",
-        "google": "GEMINI_API_KEY",
-        "openrouter": "OPENROUTER_API_KEY",
-        "deepseek": "DEEPSEEK_API_KEY",
-        "groq": "GROQ_API_KEY",
-        "custom": "CUSTOM_API_KEY",
+        "openai": ("OPENAI_API_KEY", None),
+        "anthropic": ("ANTHROPIC_API_KEY", None),
+        "google": ("GEMINI_API_KEY", None),
+        "openrouter": ("OPENROUTER_API_KEY", None),
+        "deepseek": ("DEEPSEEK_API_KEY", "DEEPSEEK_BASE_URL"),
+        "groq": ("GROQ_API_KEY", "GROQ_BASE_URL"),
+        "custom": ("CUSTOM_API_KEY", "OPENAI_BASE_URL"),
     }
 
-    env_var = env_var_map.get(provider_id)
-    if not env_var:
+    entry = env_var_map.get(provider_id)
+    if not entry:
         raise HTTPException(status_code=400, detail=f"Unknown provider: {provider_id}")
+
+    env_var, base_url_var = entry
 
     # Save to ~/.freya/cloud-keys.env
     import os
@@ -1060,11 +1056,9 @@ async def configure_provider(request: Request):
                 existing[k.strip()] = v.strip()
 
     # Update with new values
-    existing[env_var] = api_key
-    if base_url and provider_id == "custom":
-        existing["OPENAI_BASE_URL"] = base_url
-    elif base_url:
-        existing[f"{env_var}_BASE_URL"] = base_url
+    existing[env_var] = api_key.strip()
+    if base_url and base_url_var:
+        existing[base_url_var] = base_url.strip()
 
     # Write back
     lines = [f"{k}={v}" for k, v in existing.items()]
