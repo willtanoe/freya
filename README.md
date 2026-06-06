@@ -116,10 +116,10 @@ Full documentation — including Docker deployment, cloud engines, development s
 
 ## Community
 
-- **GitHub:** [github.com/freya-ai/Freya](https://github.com/willtanoe/freya)
+- **GitHub:** [willtanoe/freya](https://github.com/willtanoe/freya)
 - **Discord:** [discord.gg/YZZRxCAhmm](https://discord.gg/YZZRxCAhmm)
 - **X / Twitter:** [@FreyaAI](https://x.com/FreyaAI)
-- **Docs:** [freya-ai.github.io/Freya](https://willtanoe.github.io/freya/)
+- **Docs:** [willtanoe.github.io/freya](https://willtanoe.github.io/freya/)
 
 ## Contributing
 
@@ -137,39 +137,16 @@ uv run pytest tests/ -v
 
 Browse the [Roadmap](https://willtanoe.github.io/freya/development/roadmap/) for areas where help is needed. Comment **"take"** on any issue to get auto-assigned.
 
-## About
+## Credits
 
-OpenJarvis is part of [Intelligence Per Watt](https://www.intelligence-per-watt.ai/), a research initiative studying the intelligence efficiency of AI systems. The project is developed at [Hazy Research](https://hazyresearch.stanford.edu/) and the [Scaling Intelligence Lab](https://scalingintelligence.stanford.edu/) at [Stanford SAIL](https://ai.stanford.edu/).
+Freya is a community fork of **[OpenJarvis](https://github.com/open-jarvis/OpenJarvis)** — a research project from the [Scaling Intelligence Lab](https://scalingintelligence.stanford.edu/) at Stanford SAIL, developed at [Hazy Research](https://hazyresearch.stanford.edu/) as part of the [Intelligence Per Watt](https://www.intelligence-per-watt.ai/) initiative.
 
-## Sponsors
+**Original authors:** Jon Saad-Falcon, Avanika Narayan, Robby Manihani, Tanvir Bhathal, Herumb Shandilya, Hakki Orhun Akengin, Gabriel Bo, Andrew Park, Matthew Hart, Caia Costello, Chuan Li, Christopher Ré, Azalia Mirhoseini.
 
-<p>
-  <a href="https://www.laude.org/">Laude Institute</a> &bull;
-  <a href="https://datascience.stanford.edu/marlowe">Stanford Marlowe</a> &bull;
-  <a href="https://cloud.google.com/">Google Cloud Platform</a> &bull;
-  <a href="https://lambda.ai/">Lambda Labs</a> &bull;
-  <a href="https://ollama.com/">Ollama</a> &bull;
-  <a href="https://research.ibm.com/">IBM Research</a> &bull;
-  <a href="https://hai.stanford.edu/">Stanford HAI</a>
-</p>
+**Paper:** [OpenJarvis: Personal AI, On Personal Devices](https://arxiv.org/abs/2605.17172) (arXiv:2605.17172)
 
-## Citation
-```bibtex
-@misc{saadfalcon2026openjarvispersonalaipersonal,
-      title={OpenJarvis: Personal AI, On Personal Devices}, 
-      author={Jon Saad-Falcon and Avanika Narayan and Robby Manihani and Tanvir Bhathal and Herumb Shandilya and Hakki Orhun Akengin and Gabriel Bo and Andrew Park and Matthew Hart and Caia Costello and Chuan Li and Christopher Ré and Azalia Mirhoseini},
-      year={2026},
-      eprint={2605.17172},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG},
-      url={https://arxiv.org/abs/2605.17172}, 
-}
-```
+Fork maintained by **[Willtanoe](https://github.com/willtanoe)**.
 
 ## License
 
 [Apache 2.0](LICENSE)
-
----
-
-*Freya is a community fork of [OpenJarvis](https://github.com/open-jarvis/OpenJarvis) by [Willtanoe](https://github.com/willtanoe). We are grateful to the original OpenJarvis authors for their foundational work.*
