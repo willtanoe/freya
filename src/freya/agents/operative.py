@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from typing import Any, List, Optional
 
 from freya.agents._stubs import AgentContext, AgentResult, ToolUsingAgent
@@ -96,15 +97,22 @@ class OperativeAgent(ToolUsingAgent):
         if previous_state:
             sys_parts.append(f"\n## Previous State\n{previous_state}")
 
+        # 3. Prompt-based tool definitions (fallback for models without native tool calling)
+        prompt_tools = self._get_prompt_tool_defs()
+
         system_prompt = "\n\n".join(sys_parts) if sys_parts else None
         # Honor SOUL.md / MEMORY.md / USER.md persona files like `freya ask`,
         # appended so the operative's own instructions are preserved (#376).
         system_prompt = self._apply_persona(system_prompt)
 
-        # 3. Load session history
+        # Append prompt-based tool definitions to system prompt
+        if prompt_tools:
+            system_prompt = (system_prompt or "") + "\n\n" + prompt_tools
+
+        # 4. Load session history
         session_messages = self._load_session()
 
-        # 4. Build messages
+        # 5. Build messages
         messages = self._build_operative_messages(
             input,
             context,
@@ -112,7 +120,7 @@ class OperativeAgent(ToolUsingAgent):
             session_messages=session_messages,
         )
 
-        # 5. Run function-calling tool loop
+        # 6. Run function-calling tool loop
         openai_tools = self._executor.get_openai_tools() if self._tools else []
         all_tool_results: list[ToolResult] = []
         turns = 0
@@ -140,6 +148,19 @@ class OperativeAgent(ToolUsingAgent):
                 total_usage[k] += usage.get(k, 0)
             content = result.get("content", "")
             raw_tool_calls = result.get("tool_calls", [])
+
+            # Fallback: parse prompt-based XML tool calls if native tools didn't fire
+            if not raw_tool_calls and content:
+                parsed = self._parse_prompt_tool_calls(content)
+                if parsed:
+                    raw_tool_calls = [
+                        {
+                            "id": f"prompt_{i}",
+                            "name": tc["name"],
+                            "arguments": json.dumps(tc.get("parameters", {})),
+                        }
+                        for i, tc in enumerate(parsed)
+                    ]
 
             if not raw_tool_calls:
                 content = self._check_continuation(result, messages)
@@ -251,6 +272,53 @@ class OperativeAgent(ToolUsingAgent):
             messages.extend(context.conversation.messages)
         messages.append(Message(role=Role.USER, content=input))
         return messages
+
+    def _get_prompt_tool_defs(self) -> str:
+        """Build prompt-based tool definitions for models without native tool calling.
+
+        Returns XML-formatted tool instructions that teach the model to output
+        <execute_tool> blocks, compatible with any LLM (DeepSeek, Groq, etc).
+        """
+        if not self._tools:
+            return ""
+
+        tool_lines: list[str] = []
+        tool_lines.append("## FORMAT PEMANGGILAN TOOL (XML):")
+        tool_lines.append("Setiap kali menggunakan tool, output HARUS dalam format:")
+        tool_lines.append("<execute_tool>")
+        tool_lines.append("<tool_name>nama_tool</tool_name>")
+        tool_lines.append("<parameters>{\"param\": \"value\"}</parameters>")
+        tool_lines.append("</execute_tool>")
+        tool_lines.append("")
+        tool_lines.append("Daftar tool yang tersedia:")
+        for tool in self._tools:
+            name = getattr(tool, "name", getattr(tool, "__class__", tool).__name__)
+            desc = getattr(tool, "description", "")[:120]
+            tool_lines.append(f"- {name}: {desc}")
+        tool_lines.append("")
+        tool_lines.append("JANGAN pakai markdown codeblock untuk XML tool call.")
+        return "\n".join(tool_lines)
+
+    def _parse_prompt_tool_calls(self, content: str) -> list[dict] | None:
+        """Parse <execute_tool> XML blocks from model response text.
+
+        Returns list of {name, parameters} dicts, or None if no tools found.
+        """
+        pattern = (
+            r'<execute_tool>\s*<tool_name>(.*?)</tool_name>\s*'
+            r'<parameters>\s*(.*?)\s*</parameters>\s*</execute_tool>'
+        )
+        matches = re.findall(pattern, content, re.DOTALL)
+        if not matches:
+            return None
+        tools = []
+        for name, params_str in matches:
+            try:
+                params = json.loads(params_str.strip())
+                tools.append({"name": name.strip(), "parameters": params})
+            except json.JSONDecodeError:
+                continue
+        return tools if tools else None
 
     def _recall_state(self) -> str:
         """Retrieve previous operator state from memory backend."""
