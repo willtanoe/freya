@@ -115,9 +115,17 @@ export async function fetchModels(): Promise<ModelInfo[]> {
       // Fall through to fetch
     }
   }
-  try { res = await apiFetch(`/v1/models`); } catch { await new Promise(r => setTimeout(r, 2000)); res = await apiFetch(`/v1/models`); }
-  const data = await res.json();
-  return data.data || [];
+  try {
+    const res = await apiFetch(`/v1/models`);
+    const data = await res.json();
+    return data.data || [];
+  } catch {
+    // Retry once after delay (cold-start backend)
+    await new Promise(r => setTimeout(r, 2000));
+    const res = await apiFetch(`/v1/models`);
+    const data = await res.json();
+    return data.data || [];
+  }
 }
 
 export async function fetchSavings(): Promise<SavingsData> {

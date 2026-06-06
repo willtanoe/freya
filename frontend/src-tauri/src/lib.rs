@@ -595,12 +595,12 @@ fn prepare_subprocess_for_appimage(cmd: &mut tokio::process::Command) {
 
 /// Error message shown when `uv sync` can't even be spawned (#331) —
 /// e.g. the resolved `uv` binary doesn't exist or isn't executable.
-fn format_uv_sync_spawn_error(root: &std::path::Path, uv_bin: &str, err: &str) -> String {
+fn format_uv_sync_spawn_error(root: &std::path::Path, server_exe: &str, err: &str) -> String {
     format!(
         "Could not run `uv sync`: {}. Verify uv is installed at \
          `{}` and the Freya repo is at `{}`.",
         err,
-        uv_bin,
+        server_exe,
         root.display(),
     )
 }
@@ -652,13 +652,13 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
         s.detail = "Starting API server...".into();
     }
 
-    let uv_bin = resolve_bin("uv");
+    let server_exe = resolve_bin("freya-server.exe");
 
     // Verify uv is actually installed. Concrete per-OS instructions —
     // the generic "install it from astral.sh" was the #1 source of
     // confusion on the Discord support thread; users couldn't tell whether
     // to use winget, scoop, pip, or the official installer.
-    if !std::path::Path::new(&uv_bin).exists() && uv_bin == "uv" {
+    if !std::path::Path::new(&server_exe).exists() && server_exe == "uv" {
         let mut s = status.lock().await;
         #[cfg(target_os = "windows")]
         let msg = "Could not find 'uv' (Python package manager). \
@@ -881,7 +881,7 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
     // Previously we ran `uv sync` with both stdout AND stderr piped to
     // /dev/null and discarded the exit code (`let _ = …`). When `uv sync`
     // failed — Windows path issues, network problems, lockfile conflicts —
-    // the user saw no error, the boot continued, `uv run freya serve`
+    // the user saw no error, the boot continued, `freya-server.exe`
     // then ran in an under-provisioned venv, and the user waited the full
     // 600s health-check window before getting "Freya server did not
     // become healthy in time" with no actionable detail (issue #331).
@@ -894,7 +894,7 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
         let mut s = status.lock().await;
         s.detail = "Installing dependencies (uv sync — may take 1-2 min on first boot)...".into();
     }
-    let mut sync_cmd = tokio::process::Command::new(&uv_bin);
+    let mut sync_cmd = tokio::process::Command::new(&server_exe);
     sync_cmd
         .args([
             "sync",
@@ -917,7 +917,7 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
         }
         Err(e) => {
             let mut s = status.lock().await;
-            s.error = Some(format_uv_sync_spawn_error(root, &uv_bin, &e.to_string()));
+            s.error = Some(format_uv_sync_spawn_error(root, &server_exe, &e.to_string()));
             return;
         }
         Ok(_) => {} // success — fall through
@@ -928,7 +928,7 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
         s.detail = format!("Starting API server from {}...", root.display());
     }
 
-    let mut cmd = tokio::process::Command::new(&uv_bin);
+    let mut cmd = tokio::process::Command::new(&server_exe);
     let mut serve_argv: Vec<String> = vec![
         "run".into(),
         "freya".into(),
@@ -1000,7 +1000,7 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
             s.error = Some(format!(
                 "Freya server is running but the inference engine is not available \
                  (HTTP 503). This usually means the configured model couldn't be loaded.\n\n\
-                 Check the server logs, or run 'uv run freya serve --port {}{}' \
+                 Check the server logs, or run 'freya-server.exe --port {}{}' \
                  from {} to see the engine error.\n\n\
                  Server response:\n{}",
                 FREYA_PORT,
@@ -1032,7 +1032,7 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
                      2. The Freya repo is at {}\n\
                      3. 'uv sync' completes in that directory",
                     code_str,
-                    uv_bin,
+                    server_exe,
                     root.display(),
                 )
             } else {
@@ -1052,7 +1052,7 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
                      1. uv is installed ({})\n\
                      2. The Freya repo is at {}\n\
                      3. Run 'uv sync' in that directory",
-                    uv_bin,
+                    server_exe,
                     root.display(),
                 )
             } else {
@@ -1297,8 +1297,8 @@ async fn fetch_models(api_url: String) -> Result<serde_json::Value, String> {
 async fn run_freya_command(args: Vec<String>) -> Result<String, String> {
     let mut cmd_args = vec!["run".to_string(), "freya".to_string()];
     cmd_args.extend(args);
-    let uv_bin = resolve_bin("uv");
-    let output = tokio::process::Command::new(&uv_bin)
+    let server_exe = resolve_bin("freya-server.exe");
+    let output = tokio::process::Command::new(&server_exe)
         .args(&cmd_args)
         .output()
         .await
