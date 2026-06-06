@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Search, Cpu, X, Download, Loader2, Trash2, Check, Cloud, Key, Eye, EyeOff, Settings } from 'lucide-react';
+import { Search, Cpu, X, Download, Loader2, Trash2, Check, Cloud, Key, Eye, EyeOff } from 'lucide-react';
 import { useAppStore } from '../lib/store';
 import { pullModel, deleteModel, fetchModels, preloadModel, isTauri } from '../lib/api';
 import { getBase } from '../lib/api';
