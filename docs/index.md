@@ -9,6 +9,15 @@ hide:
 
 # Personal AI, On Personal Devices
 
+!!! info "Community Fork"
+    Freya is a community fork of **[OpenJarvis](https://github.com/open-jarvis/OpenJarvis)** — a research project from the [Scaling Intelligence Lab](https://scalingintelligence.stanford.edu/) at Stanford SAIL, developed at [Hazy Research](https://hazyresearch.stanford.edu/) as part of [Intelligence Per Watt](https://www.intelligence-per-watt.ai/).
+
+    **Original authors:** Jon Saad-Falcon, Avanika Narayan, Robby Manihani, Tanvir Bhathal, Herumb Shandilya, Hakki Orhun Akengin, Gabriel Bo, Andrew Park, Matthew Hart, Caia Costello, Chuan Li, Christopher Ré, Azalia Mirhoseini.
+
+    **Paper:** [OpenJarvis: Personal AI, On Personal Devices](https://arxiv.org/abs/2605.17172) (arXiv:2605.17172)
+
+    Fork maintained by **[Willtanoe](https://github.com/willtanoe)**.
+
 <p class="hero-tagline">
 Freya is a research framework for composable, on-device AI systems.
 Build personal AI that runs on your hardware. Cloud APIs are optional.
@@ -44,7 +53,7 @@ Freya is that stack. It is a framework for local-first personal AI, built around
 
     ```bash
     git clone https://github.com/willtanoe/freya.git
-    cd Freya
+    cd freya
     ./scripts/quickstart.sh
     ```
 
@@ -60,7 +69,7 @@ Freya is that stack. It is a framework for local-first personal AI, built around
 
     ```bash
     git clone https://github.com/willtanoe/freya.git
-    cd Freya
+    cd freya
     ./scripts/quickstart.sh
     ```
 
@@ -211,36 +220,10 @@ Freya is built around five composable layers. Each has a clean interface and can
 
 </div>
 
-## Research
+## Credits
 
-Freya is part of [Intelligence Per Watt](https://www.intelligence-per-watt.ai/), a research initiative studying the efficiency of on-device AI systems. Developed at [Hazy Research](https://hazyresearch.stanford.edu/) and the [Scaling Intelligence Lab](https://scalingintelligence.stanford.edu/) at [Stanford SAIL](https://ai.stanford.edu/).
+This documentation is adapted from the original [OpenJarvis](https://github.com/open-jarvis/OpenJarvis) project. The content below this section reflects the original project's research, architecture, and features. See the [OpenJarvis paper](https://arxiv.org/abs/2605.17172) for the full research context.
 
-Read the [blog post](https://scalingintelligence.stanford.edu/blogs/freya/) for the full research motivation, architecture details, and experimental results.
-
-## Citation
-
-```bibtex
-@misc{saadfalcon2026freyapersonalaipersonal,
-      title={Freya: Personal AI, On Personal Devices}, 
-      author={Jon Saad-Falcon and Avanika Narayan and Robby Manihani and Tanvir Bhathal and Herumb Shandilya and Hakki Orhun Akengin and Gabriel Bo and Andrew Park and Matthew Hart and Caia Costello and Chuan Li and Christopher Ré and Azalia Mirhoseini},
-      year={2026},
-      eprint={2605.17172},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG},
-      url={https://arxiv.org/abs/2605.17172}, 
-}
-```
-
-## Sponsors
-
-<p>
-  <a href="https://www.laude.org/">Laude Institute</a> &bull;
-  <a href="https://datascience.stanford.edu/marlowe">Stanford Marlowe</a> &bull;
-  <a href="https://cloud.google.com/">Google Cloud Platform</a> &bull;
-  <a href="https://lambda.ai/">Lambda Labs</a> &bull;
-  <a href="https://ollama.com/">Ollama</a> &bull;
-  <a href="https://research.ibm.com/">IBM Research</a> &bull;
-  <a href="https://hai.stanford.edu/">Stanford HAI</a>
-</p>
+For full credits, sponsors, and citation, visit the original [OpenJarvis repository](https://github.com/open-jarvis/OpenJarvis).
 
 Follow [@FreyaAI](https://x.com/FreyaAI) on X for updates.
