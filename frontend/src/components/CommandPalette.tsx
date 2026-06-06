@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { Search, Cpu, X, Download, Loader2, Trash2, Check, Cloud, Key, Eye, EyeOff } from 'lucide-react';
+import { Search, Cpu, X, Download, Loader2, Trash2, Check, Cloud, Key, Eye, EyeOff, Settings } from 'lucide-react';
 import { useAppStore } from '../lib/store';
 import { pullModel, deleteModel, fetchModels, preloadModel, isTauri } from '../lib/api';
+import { getBase } from '../lib/api';
 
 /** Popular models that users can download from the catalogue. */
 const CATALOGUE_MODELS = [
@@ -19,56 +20,32 @@ const CATALOGUE_MODELS = [
   { id: 'phi4:latest', size: '~9.1 GB', desc: 'Phi-4 14B' },
 ];
 
-/** Cloud provider definitions */
-interface CloudProvider {
+/** Cloud provider definitions — models are fetched dynamically from /v1/models */
+interface CloudProviderDef {
   name: string;
   envKey: string;
   storageKey: string;
-  models: Array<{ id: string; desc: string }>;
+  prefixes: string[];  // model ID prefixes that belong to this provider
 }
 
-const CLOUD_PROVIDERS: CloudProvider[] = [
-  {
-    name: 'OpenAI',
-    envKey: 'OPENAI_API_KEY',
-    storageKey: 'freya-openai-key',
-    models: [
-      { id: 'gpt-4o', desc: 'GPT-4o — fast, multimodal' },
-      { id: 'gpt-4o-mini', desc: 'GPT-4o Mini — cheap, fast' },
-      { id: 'o3-mini', desc: 'o3-mini — reasoning' },
-    ],
-  },
-  {
-    name: 'Anthropic',
-    envKey: 'ANTHROPIC_API_KEY',
-    storageKey: 'freya-anthropic-key',
-    models: [
-      { id: 'claude-sonnet-4-6', desc: 'Claude Sonnet 4.6 — balanced' },
-      { id: 'claude-opus-4-6', desc: 'Claude Opus 4.6 — most capable' },
-      { id: 'claude-haiku-4-5', desc: 'Claude Haiku 4.5 — fastest' },
-    ],
-  },
-  {
-    name: 'Google',
-    envKey: 'GEMINI_API_KEY',
-    storageKey: 'freya-gemini-key',
-    models: [
-      { id: 'gemini-2.5-pro', desc: 'Gemini 2.5 Pro — flagship' },
-      { id: 'gemini-2.5-flash', desc: 'Gemini 2.5 Flash — fast' },
-      { id: 'gemini-3-pro', desc: 'Gemini 3 Pro — latest' },
-    ],
-  },
-  {
-    name: 'OpenRouter',
-    envKey: 'OPENROUTER_API_KEY',
-    storageKey: 'freya-openrouter-key',
-    models: [
-      { id: 'openrouter/auto', desc: 'Auto — best model for the task' },
-      { id: 'openrouter/anthropic/claude-sonnet-4', desc: 'Claude Sonnet 4 via OpenRouter' },
-      { id: 'openrouter/deepseek/deepseek-r1', desc: 'DeepSeek R1 via OpenRouter' },
-    ],
-  },
+const CLOUD_PROVIDER_DEFS: CloudProviderDef[] = [
+  { name: 'OpenAI', envKey: 'OPENAI_API_KEY', storageKey: 'freya-openai-key', prefixes: ['gpt-', 'o1-', 'o3-', 'o4-'] },
+  { name: 'Anthropic', envKey: 'ANTHROPIC_API_KEY', storageKey: 'freya-anthropic-key', prefixes: ['claude-'] },
+  { name: 'Google', envKey: 'GEMINI_API_KEY', storageKey: 'freya-gemini-key', prefixes: ['gemini-'] },
+  { name: 'OpenRouter', envKey: 'OPENROUTER_API_KEY', storageKey: 'freya-openrouter-key', prefixes: ['openrouter/'] },
+  { name: 'MiniMax', envKey: 'MINIMAX_API_KEY', storageKey: 'freya-minimax-key', prefixes: ['MiniMax-'] },
+  { name: 'Custom', envKey: 'CUSTOM_API_KEY', storageKey: 'freya-custom-key', prefixes: ['custom/'] },
 ];
+
+/** Match a model ID to its provider definition, or null for local models. */
+function matchProvider(modelId: string): CloudProviderDef | null {
+  for (const def of CLOUD_PROVIDER_DEFS) {
+    for (const pfx of def.prefixes) {
+      if (modelId.startsWith(pfx)) return def;
+    }
+  }
+  return null;
+}
 
 function getStoredKey(storageKey: string): string {
   try { return localStorage.getItem(storageKey) || ''; } catch { return ''; }
@@ -94,9 +71,11 @@ export function CommandPalette() {
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
   const [apiKeys, setApiKeys] = useState<Record<string, string>>(() => {
     const keys: Record<string, string> = {};
-    for (const p of CLOUD_PROVIDERS) keys[p.storageKey] = getStoredKey(p.storageKey);
+    for (const p of CLOUD_PROVIDER_DEFS) keys[p.storageKey] = getStoredKey(p.storageKey);
     return keys;
   });
+  const [cloudModels, setCloudModels] = useState<string[]>([]);
+  const [cloudLoading, setCloudLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const models = useAppStore((s) => s.models);
@@ -125,6 +104,21 @@ export function CommandPalette() {
   useEffect(() => {
     setSelectedIdx(0);
   }, [query, tab]);
+
+  // Fetch cloud models when the cloud tab is opened
+  useEffect(() => {
+    if (tab !== 'cloud') return;
+    setCloudLoading(true);
+    fetch(`${getBase()}/v1/models?include_cloud=1`)
+      .then((r) => r.json())
+      .then((d) => {
+        const all: string[] = (d.data || []).map((m: { id: string }) => m.id);
+        // Filter to only cloud models (those matching a known prefix)
+        setCloudModels(all.filter((id) => matchProvider(id) !== null));
+      })
+      .catch(() => {})
+      .finally(() => setCloudLoading(false));
+  }, [tab]);
 
   useEffect(() => {
     if (pullSuccess) {
@@ -209,7 +203,7 @@ export function CommandPalette() {
     setCustomModel('');
   };
 
-  const handleSaveKey = async (provider: CloudProvider, value: string) => {
+  const handleSaveKey = async (provider: CloudProviderDef, value: string) => {
     setStoredKey(provider.storageKey, value);
     setApiKeys((prev) => ({ ...prev, [provider.storageKey]: value }));
 
@@ -221,13 +215,39 @@ export function CommandPalette() {
       } catch {}
     }
 
+    // Also sync to the backend server (POST /v1/cloud/keys)
+    try {
+      const keys: Record<string, string> = { [provider.envKey]: value };
+      // For custom provider, also send base URL if configured
+      if (provider.envKey === 'CUSTOM_API_KEY') {
+        keys['OPENAI_BASE_URL'] = getStoredKey('freya-custom-base-url');
+      }
+      fetch('/v1/cloud/keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keys }),
+      });
+    } catch {}
+
     useAppStore.getState().addLogEntry({
       timestamp: Date.now(), level: 'info', category: 'model',
       message: `${provider.name} API key ${value ? 'saved' : 'removed'}. Refreshing model list…`,
     });
 
-    // Refresh the model list so cloud models appear immediately.
-    await refreshModels();
+    // Refresh cloud models after saving a key
+    await refreshCloudModels();
+  };
+
+  const refreshCloudModels = async () => {
+    setCloudLoading(true);
+    try {
+      const r = await fetch(`${getBase()}/v1/models?include_cloud=1`);
+      const d = await r.json();
+      const all: string[] = (d.data || []).map((m: { id: string }) => m.id);
+      setCloudModels(all.filter((id) => matchProvider(id) !== null));
+    } catch {} finally {
+      setCloudLoading(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -428,96 +448,106 @@ export function CommandPalette() {
               </div>
             </>
           ) : (
-            /* ── Cloud Models tab ── */
+            /* ── Cloud Models tab (dynamic) ── */
             <div className="px-4 py-2">
               <div className="text-[11px] mb-3" style={{ color: 'var(--color-text-tertiary)' }}>
                 Add your API keys to use cloud models. Keys are stored locally on your device only.
               </div>
 
-              {CLOUD_PROVIDERS.map((provider) => {
-                const key = apiKeys[provider.storageKey] || '';
-                const hasKey = !!key;
-                const isVisible = showKeys[provider.storageKey];
+              {cloudLoading ? (
+                <div className="text-xs py-4 text-center" style={{ color: 'var(--color-text-tertiary)' }}>Loading models…</div>
+              ) : (
+                CLOUD_PROVIDER_DEFS.map((provider) => {
+                  const key = apiKeys[provider.storageKey] || '';
+                  const hasKey = !!key;
+                  const isVisible = showKeys[provider.storageKey];
+                  const providerModels = cloudModels.filter((id) => matchProvider(id)?.storageKey === provider.storageKey);
 
-                return (
-                  <div key={provider.name} className="mb-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Cloud size={14} style={{ color: hasKey ? 'var(--color-success)' : 'var(--color-text-tertiary)' }} />
-                      <span className="text-xs font-medium" style={{ color: 'var(--color-text)' }}>{provider.name}</span>
-                      {hasKey && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'color-mix(in srgb, var(--color-success) 10%, transparent)', color: 'var(--color-success)' }}>
-                          Connected
-                        </span>
+                  return (
+                    <div key={provider.name} className="mb-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Cloud size={14} style={{ color: hasKey ? 'var(--color-success)' : 'var(--color-text-tertiary)' }} />
+                        <span className="text-xs font-medium" style={{ color: 'var(--color-text)' }}>{provider.name}</span>
+                        {hasKey && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'color-mix(in srgb, var(--color-success) 10%, transparent)', color: 'var(--color-success)' }}>
+                            {providerModels.length > 0 ? `${providerModels.length} models` : 'Connected'}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* API key input */}
+                      <div className="flex gap-1.5 mb-2">
+                        <div className="flex-1 flex items-center rounded-lg" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}>
+                          <Key size={12} className="ml-2.5 shrink-0" style={{ color: 'var(--color-text-tertiary)' }} />
+                          <input
+                            type={isVisible ? 'text' : 'password'}
+                            value={key}
+                            onChange={(e) => setApiKeys((prev) => ({ ...prev, [provider.storageKey]: e.target.value }))}
+                            onBlur={() => handleSaveKey(provider, apiKeys[provider.storageKey] || '')}
+                            placeholder={`${provider.envKey}`}
+                            className="flex-1 text-xs px-2 py-1.5 bg-transparent outline-none font-mono"
+                            style={{ color: 'var(--color-text)' }}
+                          />
+                          <button
+                            onClick={() => setShowKeys((prev) => ({ ...prev, [provider.storageKey]: !prev[provider.storageKey] }))}
+                            className="px-2 cursor-pointer" style={{ color: 'var(--color-text-tertiary)' }}
+                          >
+                            {isVisible ? <EyeOff size={12} /> : <Eye size={12} />}
+                          </button>
+                        </div>
+                        {hasKey && (
+                          <button
+                            onClick={() => handleSaveKey(provider, '')}
+                            className="px-2 py-1 rounded-lg text-[10px] cursor-pointer"
+                            style={{ color: 'var(--color-error)', border: '1px solid var(--color-error)' }}
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Models for this provider (dynamic from API) */}
+                      {hasKey && providerModels.length > 0 && (
+                        <div className="ml-5 flex flex-col gap-1">
+                          {providerModels.map((modelId) => {
+                            const isActive = modelId === selectedModel;
+                            return (
+                              <button
+                                key={modelId}
+                                onClick={() => handleSelect(modelId)}
+                                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left cursor-pointer transition-colors"
+                                style={{ background: isActive ? 'var(--color-accent-subtle)' : 'transparent' }}
+                                onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'var(--color-bg-secondary)'; }}
+                                onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                              >
+                                <Cloud size={12} style={{ color: isActive ? 'var(--color-accent)' : 'var(--color-text-tertiary)' }} />
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-xs truncate" style={{ color: isActive ? 'var(--color-accent)' : 'var(--color-text)', fontWeight: isActive ? 500 : 400 }}>
+                                    {modelId}
+                                  </div>
+                                </div>
+                                {isActive && (
+                                  <span className="text-[9px] px-1.5 py-0.5 rounded-full shrink-0" style={{ background: 'var(--color-accent-subtle)', color: 'var(--color-accent)' }}>
+                                    Active
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {hasKey && providerModels.length === 0 && !cloudLoading && (
+                        <div className="ml-5 text-[10px]" style={{ color: 'var(--color-text-tertiary)' }}>
+                          {provider.name === 'Custom'
+                            ? 'Configure Base URL + Models in Settings → API Keys → Custom'
+                            : 'No models available — check your key or pull models first'}
+                        </div>
                       )}
                     </div>
-
-                    {/* API key input */}
-                    <div className="flex gap-1.5 mb-2">
-                      <div className="flex-1 flex items-center rounded-lg" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}>
-                        <Key size={12} className="ml-2.5 shrink-0" style={{ color: 'var(--color-text-tertiary)' }} />
-                        <input
-                          type={isVisible ? 'text' : 'password'}
-                          value={key}
-                          onChange={(e) => setApiKeys((prev) => ({ ...prev, [provider.storageKey]: e.target.value }))}
-                          onBlur={() => handleSaveKey(provider, apiKeys[provider.storageKey] || '')}
-                          placeholder={`${provider.envKey}`}
-                          className="flex-1 text-xs px-2 py-1.5 bg-transparent outline-none font-mono"
-                          style={{ color: 'var(--color-text)' }}
-                        />
-                        <button
-                          onClick={() => setShowKeys((prev) => ({ ...prev, [provider.storageKey]: !prev[provider.storageKey] }))}
-                          className="px-2 cursor-pointer" style={{ color: 'var(--color-text-tertiary)' }}
-                        >
-                          {isVisible ? <EyeOff size={12} /> : <Eye size={12} />}
-                        </button>
-                      </div>
-                      {hasKey && (
-                        <button
-                          onClick={() => handleSaveKey(provider, '')}
-                          className="px-2 py-1 rounded-lg text-[10px] cursor-pointer"
-                          style={{ color: 'var(--color-error)', border: '1px solid var(--color-error)' }}
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Models for this provider (only show if key is set) */}
-                    {hasKey && (
-                      <div className="ml-5 flex flex-col gap-1">
-                        {provider.models.map((model) => {
-                          const isActive = model.id === selectedModel;
-                          return (
-                            <button
-                              key={model.id}
-                              onClick={() => handleSelect(model.id)}
-                              className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left cursor-pointer transition-colors"
-                              style={{ background: isActive ? 'var(--color-accent-subtle)' : 'transparent' }}
-                              onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'var(--color-bg-secondary)'; }}
-                              onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
-                            >
-                              <Cloud size={12} style={{ color: isActive ? 'var(--color-accent)' : 'var(--color-text-tertiary)' }} />
-                              <div className="flex-1 min-w-0">
-                                <div className="text-xs truncate" style={{ color: isActive ? 'var(--color-accent)' : 'var(--color-text)', fontWeight: isActive ? 500 : 400 }}>
-                                  {model.id}
-                                </div>
-                                <div className="text-[10px] truncate" style={{ color: 'var(--color-text-tertiary)' }}>
-                                  {model.desc}
-                                </div>
-                              </div>
-                              {isActive && (
-                                <span className="text-[9px] px-1.5 py-0.5 rounded-full shrink-0" style={{ background: 'var(--color-accent-subtle)', color: 'var(--color-accent)' }}>
-                                  Active
-                                </span>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           )}
         </div>
