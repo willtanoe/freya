@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Palette,
   Globe,
-  Cpu,
   Database,
   Info,
   Check,
@@ -22,62 +21,20 @@ import { useAppStore, type ThemeMode } from '../lib/store';
 import { checkHealth, fetchSpeechHealth, getMemoryStats } from '../lib/api';
 import { isAutoUpdateDisabled, setAutoUpdateDisabled } from '../components/Desktop/UpdateChecker';
 
-function ApiKeyInput({ storageKey, placeholder, envKey }: { storageKey: string; placeholder: string; envKey?: string }) {
-  const [value, setValue] = useState(() => {
-    try { return localStorage.getItem(storageKey) || ''; } catch { return ''; }
-  });
-  const [saved, setSaved] = useState(false);
-  const save = (v: string) => {
-    setValue(v);
-    try { if (v) localStorage.setItem(storageKey, v); else localStorage.removeItem(storageKey); } catch {}
-    // Sync to backend
-    if (envKey) {
-      try {
-        fetch('/v1/cloud/keys', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ keys: { [envKey]: v || '' } }),
-        });
-      } catch {}
-    }
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
-  return (
-    <div className="flex items-center gap-2">
-      <input type="password" value={value} onChange={e => save(e.target.value)} placeholder={placeholder}
-        className="w-48 px-2 py-1 rounded text-xs"
-        style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }} />
-      {saved && <span className="text-[10px]" style={{ color: 'var(--color-success)' }}>Saved</span>}
-    </div>
-  );
-}
-
-function CloudProviderStatus({ label, storageKey }: { label: string; storageKey: string }) {
-  const [hasKey, setHasKey] = useState(false);
-  useEffect(() => {
-    try { setHasKey(!!localStorage.getItem(storageKey)); } catch { setHasKey(false); }
-  }, [storageKey]);
-  return (
-    <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-      <span style={{
-        width: 6, height: 6, borderRadius: '50%', display: 'inline-block',
-        background: hasKey ? 'var(--color-success)' : 'var(--color-text-tertiary)',
-      }} />
-      {label}
-    </span>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
     <div
       className="rounded-xl p-5"
       style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
     >
-      <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--color-text)' }}>
+      <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--color-text)' }}>
         {title}
       </h3>
+      {description && (
+        <p className="text-xs mb-3" style={{ color: 'var(--color-text-tertiary)' }}>
+          {description}
+        </p>
+      )}
       {children}
     </div>
   );
@@ -322,59 +279,11 @@ export function SettingsPage() {
           </Section>
 
           {/* Cloud Providers */}
-          <Section title="Cloud Providers" description="Manage cloud API keys. Use ⌘K → Providers for full management.">
-            <SettingRow label="Configured" description="Green dot means API key is configured">
-              <div className="flex flex-wrap gap-3">
-                <CloudProviderStatus label="OpenAI" storageKey="freya-openai-key" />
-                <CloudProviderStatus label="Anthropic" storageKey="freya-anthropic-key" />
-                <CloudProviderStatus label="Google" storageKey="freya-gemini-key" />
-                <CloudProviderStatus label="OpenRouter" storageKey="freya-openrouter-key" />
-              </div>
-            </SettingRow>
-          </Section>
-
-          {/* API Keys */}
-          <Section title="API Keys">
-            <SettingRow label="OpenAI" description="GPT-4, GPT-3.5, etc.">
-              <ApiKeyInput storageKey="freya-openai-key" placeholder="sk-..." envKey="OPENAI_API_KEY" />
-            </SettingRow>
-            <SettingRow label="Anthropic" description="Claude models">
-              <ApiKeyInput storageKey="freya-anthropic-key" placeholder="sk-ant-..." envKey="ANTHROPIC_API_KEY" />
-            </SettingRow>
-            <SettingRow label="Google" description="Gemini models">
-              <ApiKeyInput storageKey="freya-gemini-key" placeholder="AI..." envKey="GEMINI_API_KEY" />
-            </SettingRow>
-            <SettingRow label="OpenRouter" description="Multi-provider routing">
-              <ApiKeyInput storageKey="freya-openrouter-key" placeholder="sk-or-..." envKey="OPENROUTER_API_KEY" />
-            </SettingRow>
-            <SettingRow label="Custom" description="OpenAI-compatible API (DeepSeek, Groq, xAI, local)">
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] w-14" style={{ color: 'var(--color-text-tertiary)' }}>Base URL</span>
-                  <input
-                    type="text"
-                    placeholder="https://api.deepseek.com"
-                    className="w-56 px-2 py-1 rounded text-xs"
-                    style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
-                    defaultValue={(() => { try { return localStorage.getItem('freya-custom-base-url') || ''; } catch { return ''; } })()}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      try { if (v) localStorage.setItem('freya-custom-base-url', v); else localStorage.removeItem('freya-custom-base-url'); } catch {}
-                      try {
-                        fetch('/v1/cloud/keys', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ keys: { OPENAI_BASE_URL: v || '' } }),
-                        });
-                      } catch {}
-                    }}
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] w-14" style={{ color: 'var(--color-text-tertiary)' }}>API Key</span>
-                  <ApiKeyInput storageKey="freya-custom-key" placeholder="sk-..." envKey="CUSTOM_API_KEY" />
-                </div>
-              </div>
+          <Section title="Cloud Providers" description="Use ⌘K → Providers to add and manage API keys. Keys are stored in ~/.freya/cloud-keys.env and read by the server on each request.">
+            <SettingRow label="" description="">
+              <span className="text-xs px-3 py-1.5 rounded-lg" style={{ background: 'var(--color-accent-subtle)', color: 'var(--color-accent)' }}>
+                Press ⌘K to open command palette → Providers tab
+              </span>
             </SettingRow>
           </Section>
 
