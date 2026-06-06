@@ -129,7 +129,7 @@ Quick start for contributors:
 
 ```bash
 git clone https://github.com/willtanoe/freya.git
-cd Freya
+cd freya
 uv sync --extra dev
 uv run pre-commit install
 uv run pytest tests/ -v
@@ -139,7 +139,7 @@ Browse the [Roadmap](https://willtanoe.github.io/freya/development/roadmap/) for
 
 ## About
 
-Freya is part of [Intelligence Per Watt](https://www.intelligence-per-watt.ai/), a research initiative studying the intelligence efficiency of AI systems. The project is developed at [Hazy Research](https://hazyresearch.stanford.edu/) and the [Scaling Intelligence Lab](https://scalingintelligence.stanford.edu/) at [Stanford SAIL](https://ai.stanford.edu/).
+OpenJarvis is part of [Intelligence Per Watt](https://www.intelligence-per-watt.ai/), a research initiative studying the intelligence efficiency of AI systems. The project is developed at [Hazy Research](https://hazyresearch.stanford.edu/) and the [Scaling Intelligence Lab](https://scalingintelligence.stanford.edu/) at [Stanford SAIL](https://ai.stanford.edu/).
 
 ## Sponsors
 
@@ -155,8 +155,8 @@ Freya is part of [Intelligence Per Watt](https://www.intelligence-per-watt.ai/),
 
 ## Citation
 ```bibtex
-@misc{saadfalcon2026freyapersonalaipersonal,
-      title={Freya: Personal AI, On Personal Devices}, 
+@misc{saadfalcon2026openjarvispersonalaipersonal,
+      title={OpenJarvis: Personal AI, On Personal Devices}, 
       author={Jon Saad-Falcon and Avanika Narayan and Robby Manihani and Tanvir Bhathal and Herumb Shandilya and Hakki Orhun Akengin and Gabriel Bo and Andrew Park and Matthew Hart and Caia Costello and Chuan Li and Christopher Ré and Azalia Mirhoseini},
       year={2026},
       eprint={2605.17172},
