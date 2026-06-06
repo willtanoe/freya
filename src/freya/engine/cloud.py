@@ -1446,7 +1446,7 @@ class CloudEngine(InferenceEngine):
             try:
                 import httpx
                 # Use the client's base_url and api_key to fetch models
-                base = str(self._openrouter_client.base_url)
+                base = str(self._openrouter_client.base_url).rstrip("/")
                 api_key = self._openrouter_client.api_key
                 resp = httpx.get(
                     f"{base}/models",
