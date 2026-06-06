@@ -1,17 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  Zap,
-  Activity,
-  Thermometer,
-  DollarSign,
-  
-  Cloud,
-  
-  Hash,
-  X,
-  
-  
-} from 'lucide-react';
+import { Zap, Activity, Thermometer, Hash, X } from 'lucide-react';
 import { useAppStore } from '../../lib/store';
 import { getBase } from '../../lib/api';
 
@@ -28,12 +16,8 @@ interface TelemetryStats {
   total_tokens?: number;
 }
 
-
 export function SystemPanel() {
-   = useAppStore((s) => s.savings);
   const toggleSystemPanel = useAppStore((s) => s.toggleSystemPanel);
-   = useAppStore((s) => s.optInEnabled);
-   = useAppStore((s) => s.setOptInModalOpen);
   const liveEnergy = useAppStore((s) => s.liveEnergy);
   const [energy, setEnergy] = useState<EnergyData | null>(null);
   const [telemetry, setTelemetry] = useState<TelemetryStats | null>(null);
@@ -61,14 +45,6 @@ export function SystemPanel() {
     const interval = setInterval(fetchData, 3000);
     return () => clearInterval(interval);
   }, [fetchData]);
-
-  // Re-fetch energy/telemetry when savings updates (after a chat message)
-  useEffect(() => {
-    if (savings) fetchData();
-  }, [ fetchData]);
-
-   = (savings?.total_prompt_tokens ?? 0) / 1000;
-   = (savings?.total_completion_tokens ?? 0) / 1000;
 
   return (
     <div
@@ -105,8 +81,8 @@ export function SystemPanel() {
             Session
           </h4>
           <div className="grid grid-cols-2 gap-2">
-            <MiniStat icon={Hash} label="Requests" value={String(savings?.total_calls ?? telemetry?.total_requests ?? 0)} />
-            <MiniStat icon={Hash} label="Output Tokens" value={formatNumber(savings?.total_completion_tokens ?? telemetry?.total_tokens ?? 0)} />
+            <MiniStat icon={Hash} label="Requests" value={String(telemetry?.total_requests ?? 0)} />
+            <MiniStat icon={Hash} label="Tokens" value={formatNumber(telemetry?.total_tokens ?? 0)} />
           </div>
         </section>
 
@@ -131,14 +107,11 @@ export function SystemPanel() {
             <MiniStat
               icon={Activity}
               label="Energy"
-              value={(
-                ((liveEnergy?.energy_j ?? energy?.total_energy_j ?? 0) / 1000)
-              ).toFixed(1)}
+              value={((liveEnergy?.energy_j ?? energy?.total_energy_j ?? 0) / 1000).toFixed(1)}
               unit="kJ"
             />
           </div>
         </section>
-
       </div>
     </div>
   );
