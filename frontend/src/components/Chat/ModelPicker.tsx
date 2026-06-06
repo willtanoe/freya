@@ -1,18 +1,23 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Cloud, ChevronDown, Search, Check, Loader2 } from 'lucide-react';
+import { Cloud, ChevronDown, Search, Check, Loader2, ExternalLink } from 'lucide-react';
 import { useAppStore } from '../../lib/store';
 import {
   fetchProviderStatus,
   fetchAvailableModels,
   getProviderIcon,
-  getProviderColor,
-  type ProviderConfig,
   type ProviderModels,
 } from '../../lib/cloud-config';
 
-// ---------------------------------------------------------------------------
-// ModelPicker Component
-// ---------------------------------------------------------------------------
+// Provider color map for visual distinction
+const PROVIDER_COLORS: Record<string, string> = {
+  openai: '#10a37f',
+  anthropic: '#d4a574',
+  deepseek: '#5a9bcf',
+  openrouter: '#33c3f0',
+  groq: '#7c3aed',
+  google: '#ea4335',
+  custom: '#64748b',
+};
 
 export function ModelPickerButton() {
   const selectedModel = useAppStore((s) => s.selectedModel);
@@ -22,21 +27,17 @@ export function ModelPickerButton() {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
-  const [providerStatus, setProviderStatus] = useState<ProviderConfig[]>([]);
   const [providerModels, setProviderModels] = useState<ProviderModels[]>([]);
   const ref = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [status, models] = await Promise.all([
-        fetchProviderStatus(),
-        fetchAvailableModels(),
-      ]);
-      setProviderStatus(status);
+      const models = await fetchAvailableModels();
       setProviderModels(models);
-    } catch (err) {
-      console.error('Failed to load model data:', err);
+    } catch {
+      // silent
     } finally {
       setLoading(false);
     }
@@ -47,293 +48,190 @@ export function ModelPickerButton() {
     loadData();
   }, [open, loadData]);
 
+  // Focus search on open
+  useEffect(() => {
+    if (open && searchRef.current) {
+      setTimeout(() => searchRef.current?.focus(), 50);
+    }
+  }, [open]);
+
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false);
+        setSearch('');
       }
     };
-    if (open) {
-      document.addEventListener('mousedown', handler);
-    }
+    if (open) document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  // Filter models based on search
-  const filteredProviders = search
-    ? providerModels
-        .map((p) => ({
-          ...p,
-          models: p.models.filter((m) =>
-            m.toLowerCase().includes(search.toLowerCase())
-          ),
-        }))
-        .filter((p) => p.models.length > 0)
-    : providerModels;
+  const allModels = providerModels.flatMap((p) =>
+    p.models.map((m) => ({ id: m, provider: p.id, providerName: p.name }))
+  );
 
-  // Get all model IDs for display
-  const allModelIds = providerModels.flatMap((p) => p.models);
+  const filtered = search
+    ? allModels.filter((m) => m.id.toLowerCase().includes(search.toLowerCase()))
+    : allModels;
+
+  // Group filtered results by provider
+  const grouped = new Map<string, typeof filtered>();
+  for (const m of filtered) {
+    const group = grouped.get(m.provider) || [];
+    group.push(m);
+    grouped.set(m.provider, group);
+  }
 
   return (
     <div ref={ref} className="relative">
+      {/* Trigger button */}
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs transition-colors cursor-pointer"
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs transition-all cursor-pointer"
         style={{
-          background: 'transparent',
-          border: '1px solid var(--color-border)',
-          color: 'var(--color-text-tertiary)',
+          background: open ? 'var(--color-accent-subtle)' : 'transparent',
+          border: `1px solid ${open ? 'var(--color-accent)' : 'var(--color-border)'}`,
+          color: open ? 'var(--color-accent)' : 'var(--color-text-tertiary)',
         }}
         title="Change model"
       >
         <Cloud size={12} />
-        <span className="max-w-[120px] truncate">
-          {modelLoading ? '...' : selectedModel || 'Pick model'}
+        <span className="max-w-[120px] truncate font-medium">
+          {modelLoading ? '...' : selectedModel || 'Select model'}
         </span>
-        <ChevronDown size={10} />
+        <ChevronDown
+          size={10}
+          style={{ transform: open ? 'rotate(180deg)' : undefined, transition: 'transform 0.15s' }}
+        />
       </button>
 
+      {/* Dropdown */}
       {open && (
         <div
-          className="absolute bottom-full right-0 mb-1 w-80 max-h-96 overflow-hidden rounded-lg border shadow-lg z-50 flex flex-col"
+          className="absolute bottom-full right-0 mb-2 w-72 max-h-[420px] overflow-hidden rounded-xl border shadow-xl z-50 flex flex-col"
           style={{
             background: 'var(--color-surface)',
             borderColor: 'var(--color-border)',
           }}
         >
-          {/* Search */}
-          <div className="p-2 border-b" style={{ borderColor: 'var(--color-border)' }}>
+          {/* Search bar */}
+          <div className="p-2 border-b shrink-0" style={{ borderColor: 'var(--color-border)' }}>
             <div className="relative">
               <Search
-                size={12}
-                className="absolute left-2 top-1/2 -translate-y-1/2"
+                size={13}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2"
                 style={{ color: 'var(--color-text-tertiary)' }}
               />
               <input
-                autoFocus
+                ref={searchRef}
                 type="text"
                 placeholder="Search models..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-7 pr-2 py-1.5 text-xs rounded border outline-none"
+                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border outline-none transition-colors"
                 style={{
                   background: 'var(--color-bg)',
                   borderColor: 'var(--color-border)',
                   color: 'var(--color-text)',
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = 'var(--color-accent)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = 'var(--color-border)';
                 }}
               />
             </div>
           </div>
 
           {/* Model list */}
-          <div className="overflow-y-auto flex-1">
+          <div className="overflow-y-auto flex-1 py-1">
             {loading ? (
-              <div
-                className="flex items-center justify-center py-8 gap-2"
-                style={{ color: 'var(--color-text-tertiary)' }}
-              >
+              <div className="flex items-center justify-center py-10 gap-2" style={{ color: 'var(--color-text-tertiary)' }}>
                 <Loader2 size={14} className="animate-spin" />
                 <span className="text-xs">Loading models...</span>
               </div>
-            ) : allModelIds.length === 0 ? (
-              <div
-                className="px-3 py-6 text-center"
-                style={{ color: 'var(--color-text-tertiary)' }}
-              >
-                <p className="text-xs mb-2">No cloud models configured</p>
-                <p className="text-[10px]">
-                  Add API keys in Settings → Cloud Providers
+            ) : allModels.length === 0 ? (
+              <div className="px-4 py-10 text-center" style={{ color: 'var(--color-text-tertiary)' }}>
+                <Cloud size={28} className="mx-auto mb-2 opacity-30" />
+                <p className="text-xs font-medium mb-1">No models available</p>
+                <p className="text-[11px] leading-relaxed">
+                  Press <kbd className="px-1 py-0.5 text-[10px] rounded bg-[var(--color-bg-tertiary)] font-mono">⌘K</kbd> → Providers to add API keys
                 </p>
               </div>
-            ) : search ? (
-              // Show flat list when searching
-              <div className="py-1">
-                {filteredProviders.flatMap((p) =>
-                  p.models.map((modelId) => (
-                    <ModelItem
-                      key={modelId}
-                      modelId={modelId}
-                      providerId={p.id}
-                      selected={modelId === selectedModel}
-                      onSelect={(id) => {
-                        setSelectedModel(id);
-                        setOpen(false);
-                        setSearch('');
-                      }}
-                    />
-                  )
-                )}
-                {filteredProviders.length === 0 && (
-                  <div
-                    className="px-3 py-4 text-center text-xs"
-                    style={{ color: 'var(--color-text-tertiary)' }}
-                  >
-                    No models match &quot;{search}&quot;
-                  </div>
-                )}
-              </div>
             ) : (
-              // Show grouped by provider
-              <div className="py-1">
-                {filteredProviders.map((provider) => (
-                  <ProviderSection
-                    key={provider.id}
-                    provider={provider}
-                    selectedModel={selectedModel}
-                    onSelectModel={(id) => {
-                      setSelectedModel(id);
-                      setOpen(false);
-                    }}
-                  />
-                ))}
-              </div>
+              [...grouped.entries()].map(([providerId, models]) => (
+                <div key={providerId} className="mb-1">
+                  {/* Provider header */}
+                  <div
+                    className="flex items-center gap-2 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider"
+                    style={{ color: PROVIDER_COLORS[providerId] || 'var(--color-text-tertiary)' }}
+                  >
+                    <span>{getProviderIcon(providerId)}</span>
+                    <span>{models[0]?.providerName || providerId}</span>
+                    <span className="ml-auto opacity-60">{models.length}</span>
+                  </div>
+
+                  {/* Model items */}
+                  {models.map((m) => {
+                    const isActive = m.id === selectedModel;
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedModel(m.id);
+                          setOpen(false);
+                          setSearch('');
+                        }}
+                        className="w-full text-left px-3 py-1.5 text-xs transition-colors flex items-center gap-2 group"
+                        style={{
+                          color: isActive ? PROVIDER_COLORS[providerId] || 'var(--color-accent)' : 'var(--color-text-secondary)',
+                          background: isActive ? 'color-mix(in srgb, var(--color-accent) 8%, transparent)' : 'transparent',
+                          paddingLeft: '1.5rem',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isActive) e.currentTarget.style.background = 'var(--color-bg-secondary)';
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isActive) e.currentTarget.style.background = 'transparent';
+                        }}
+                      >
+                        <div
+                          className="w-1.5 h-1.5 rounded-full shrink-0"
+                          style={{
+                            background: isActive ? (PROVIDER_COLORS[providerId] || 'var(--color-accent)') : 'transparent',
+                            border: isActive ? 'none' : '1px solid var(--color-border)',
+                          }}
+                        />
+                        <span className="truncate flex-1">{m.id}</span>
+                        {isActive && (
+                          <Check size={11} style={{ color: PROVIDER_COLORS[providerId] || 'var(--color-accent)' }} />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))
             )}
+          </div>
+
+          {/* Footer hint */}
+          <div
+            className="px-3 py-2 text-[10px] shrink-0 border-t"
+            style={{
+              borderColor: 'var(--color-border)',
+              color: 'var(--color-text-tertiary)',
+              background: 'var(--color-bg-secondary)',
+            }}
+          >
+            Models fetched dynamically from configured providers
           </div>
         </div>
       )}
     </div>
   );
 }
-
-// ---------------------------------------------------------------------------
-// ProviderSection
-// ---------------------------------------------------------------------------
-
-function ProviderSection({
-  provider,
-  selectedModel,
-  onSelectModel,
-}: {
-  provider: ProviderModels;
-  selectedModel: string;
-  onSelectModel: (modelId: string) => void;
-}) {
-  const [expanded, setExpanded] = useState(true);
-  const icon = getProviderIcon(provider.id);
-  const color = getProviderColor(provider.id);
-
-  return (
-    <div className="mb-1">
-      {/* Provider header */}
-      <button
-        type="button"
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-3 py-1.5 text-xs transition-colors hover:bg-[var(--color-hover)]"
-        style={{ color: 'var(--color-text-secondary)' }}
-      >
-        <div className="flex items-center gap-2">
-          <span>{icon}</span>
-          <span className="font-medium">{provider.name}</span>
-          <span
-            className="px-1.5 py-0.5 rounded text-[10px]"
-            style={{ background: 'var(--color-bg-tertiary)' }}
-          >
-            {provider.models.length}
-          </span>
-        </div>
-        <ChevronDown
-          size={10}
-          style={{
-            transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
-            transition: 'transform 0.15s',
-          }}
-        />
-      </button>
-
-      {/* Models */}
-      {expanded && (
-        <div className="ml-4">
-          {provider.models.map((modelId) => (
-            <ModelItem
-              key={modelId}
-              modelId={modelId}
-              providerId={provider.id}
-              selected={modelId === selectedModel}
-              onSelect={onSelectModel}
-              indent
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// ModelItem
-// ---------------------------------------------------------------------------
-
-function ModelItem({
-  modelId,
-  providerId,
-  selected,
-  onSelect,
-  indent = false,
-}: {
-  modelId: string;
-  providerId: string;
-  selected: boolean;
-  onSelect: (modelId: string) => void;
-  indent?: boolean;
-}) {
-  const color = getProviderColor(providerId);
-
-  // Determine model tier from name
-  const isThinking = modelId.includes('thinking') || modelId.includes('reasoning');
-  const isMini = modelId.includes('mini') || modelId.includes('nano') || modelId.includes('flash') || modelId.includes('haiku');
-  const isPro = modelId.includes('pro') || modelId.includes('opus') || modelId.includes('enterprise');
-
-  let tierBadge = '';
-  let tierColor = '';
-  if (isThinking) {
-    tierBadge = 'Think';
-    tierColor = '#8b5cf6';
-  } else if (isPro) {
-    tierBadge = 'Pro';
-    tierColor = '#f59e0b';
-  } else if (isMini) {
-    tierBadge = 'Fast';
-    tierColor = '#10b981';
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={() => onSelect(modelId)}
-      className="w-full text-left px-3 py-1.5 text-xs transition-colors flex items-center gap-2"
-      style={{
-        color: selected ? color : 'var(--color-text-secondary)',
-        background: selected ? 'color-mix(in srgb, var(--color-accent) 8%, transparent)' : 'transparent',
-        paddingLeft: indent ? '1rem' : '0.75rem',
-      }}
-      onMouseEnter={(e) => {
-        if (!selected) {
-          (e.target as HTMLElement).style.background = 'var(--color-hover)';
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!selected) {
-          (e.target as HTMLElement).style.background = 'transparent';
-        }
-      }}
-    >
-      {selected && <Check size={10} style={{ color, flexShrink: 0 }} />}
-      <span className="truncate flex-1">{modelId}</span>
-      {tierBadge && (
-        <span
-          className="text-[9px] px-1 py-0.5 rounded font-medium"
-          style={{ background: tierColor, color: 'white' }}
-        >
-          {tierBadge}
-        </span>
-      )}
-    </button>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Export
-// ---------------------------------------------------------------------------
 
 export { ModelPickerButton as default };
