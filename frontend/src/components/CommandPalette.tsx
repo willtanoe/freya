@@ -1,81 +1,28 @@
 import { useState, useRef, useEffect } from 'react';
-import { Search, Cpu, X, Download, Loader2, Trash2, Check, Cloud, Key, Eye, EyeOff } from 'lucide-react';
+import { Search, X, Cloud, Key, Eye, EyeOff, Check, Loader2 } from 'lucide-react';
 import { useAppStore } from '../lib/store';
-import { pullModel, deleteModel, fetchModels, preloadModel, isTauri } from '../lib/api';
-import { getBase } from '../lib/api';
+import { fetchModels } from '../lib/api';
+import {
+  CLOUD_PROVIDERS,
+  fetchProviderStatus,
+  fetchAvailableModels,
+  configureProvider,
+  testProvider,
+  type ProviderModels,
+} from '../lib/cloud-config';
 
-/** Popular models that users can download from the catalogue. */
-const CATALOGUE_MODELS = [
-  { id: 'qwen3.5:0.8b', size: '~1 GB', desc: 'Qwen 3.5 0.8B — fast, lightweight' },
-  { id: 'qwen3.5:2b', size: '~2.7 GB', desc: 'Qwen 3.5 2B' },
-  { id: 'qwen3.5:4b', size: '~3.4 GB', desc: 'Qwen 3.5 4B — recommended default' },
-  { id: 'qwen3.5:9b', size: '~6.6 GB', desc: 'Qwen 3.5 9B' },
-  { id: 'qwen3.5:27b', size: '~17 GB', desc: 'Qwen 3.5 27B' },
-  { id: 'qwen3.5:35b', size: '~24 GB', desc: 'Qwen 3.5 35B' },
-  { id: 'qwen3.5:122b', size: '~81 GB', desc: 'Qwen 3.5 122B — largest' },
-  { id: 'llama3.3:latest', size: '~4.9 GB', desc: 'Llama 3.3 8B' },
-  { id: 'mistral:latest', size: '~4.1 GB', desc: 'Mistral 7B' },
-  { id: 'gemma3:latest', size: '~3.3 GB', desc: 'Gemma 3 4B' },
-  { id: 'deepseek-r1:7b', size: '~4.7 GB', desc: 'DeepSeek R1 7B' },
-  { id: 'phi4:latest', size: '~9.1 GB', desc: 'Phi-4 14B' },
-];
-
-/** Cloud provider definitions — models are fetched dynamically from /v1/models */
-interface CloudProviderDef {
-  name: string;
-  envKey: string;
-  storageKey: string;
-  prefixes: string[];  // model ID prefixes that belong to this provider
-}
-
-const CLOUD_PROVIDER_DEFS: CloudProviderDef[] = [
-  { name: 'OpenAI', envKey: 'OPENAI_API_KEY', storageKey: 'freya-openai-key', prefixes: ['gpt-', 'o1-', 'o3-', 'o4-'] },
-  { name: 'Anthropic', envKey: 'ANTHROPIC_API_KEY', storageKey: 'freya-anthropic-key', prefixes: ['claude-'] },
-  { name: 'Google', envKey: 'GEMINI_API_KEY', storageKey: 'freya-gemini-key', prefixes: ['gemini-'] },
-  { name: 'OpenRouter', envKey: 'OPENROUTER_API_KEY', storageKey: 'freya-openrouter-key', prefixes: ['openrouter/'] },
-  { name: 'MiniMax', envKey: 'MINIMAX_API_KEY', storageKey: 'freya-minimax-key', prefixes: ['MiniMax-'] },
-  { name: 'Custom', envKey: 'CUSTOM_API_KEY', storageKey: 'freya-custom-key', prefixes: ['custom/'] },
-];
-
-/** Match a model ID to its provider definition, or null for local models. */
-function matchProvider(modelId: string): CloudProviderDef | null {
-  for (const def of CLOUD_PROVIDER_DEFS) {
-    for (const pfx of def.prefixes) {
-      if (modelId.startsWith(pfx)) return def;
-    }
-  }
-  return null;
-}
-
-function getStoredKey(storageKey: string): string {
-  try { return localStorage.getItem(storageKey) || ''; } catch { return ''; }
-}
-function setStoredKey(storageKey: string, value: string): void {
-  try {
-    if (value) localStorage.setItem(storageKey, value);
-    else localStorage.removeItem(storageKey);
-  } catch {}
-}
-
-type Tab = 'installed' | 'catalogue' | 'cloud';
+type Tab = 'models' | 'providers';
 
 export function CommandPalette() {
   const [query, setQuery] = useState('');
   const [selectedIdx, setSelectedIdx] = useState(0);
-  const [tab, setTab] = useState<Tab>('installed');
-  const [pulling, setPulling] = useState<string | null>(null);
-  const [pullError, setPullError] = useState<string | null>(null);
-  const [pullSuccess, setPullSuccess] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState<string | null>(null);
-  const [customModel, setCustomModel] = useState('');
+  const [tab, setTab] = useState<Tab>('models');
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
-  const [apiKeys, setApiKeys] = useState<Record<string, string>>(() => {
-    const keys: Record<string, string> = {};
-    for (const p of CLOUD_PROVIDER_DEFS) keys[p.storageKey] = getStoredKey(p.storageKey);
-    return keys;
-  });
-  const [cloudModels, setCloudModels] = useState<string[]>([]);
+  const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
+  const [providerModels, setProviderModels] = useState<ProviderModels[]>([]);
   const [cloudLoading, setCloudLoading] = useState(false);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [saveMsg, setSaveMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const models = useAppStore((s) => s.models);
@@ -84,18 +31,9 @@ export function CommandPalette() {
   const setModels = useAppStore((s) => s.setModels);
   const setCommandPaletteOpen = useAppStore((s) => s.setCommandPaletteOpen);
 
-  const installedIds = new Set(models.map((m) => m.id));
-
-  const filtered = tab === 'installed'
-    ? (query
-        ? models.filter((m) => m.id.toLowerCase().includes(query.toLowerCase()))
-        : models)
-    : tab === 'catalogue'
-    ? CATALOGUE_MODELS.filter((m) =>
-        !installedIds.has(m.id) &&
-        (!query || m.id.toLowerCase().includes(query.toLowerCase()) || m.desc.toLowerCase().includes(query.toLowerCase()))
-      )
-    : []; // cloud tab doesn't use filtered
+  const filtered = query
+    ? models.filter((m) => m.id.toLowerCase().includes(query.toLowerCase()))
+    : models;
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -105,149 +43,55 @@ export function CommandPalette() {
     setSelectedIdx(0);
   }, [query, tab]);
 
-  // Fetch cloud models when the cloud tab is opened
+  // Load cloud provider status when providers tab opens
   useEffect(() => {
-    if (tab !== 'cloud') return;
+    if (tab !== 'providers') return;
     setCloudLoading(true);
-    fetch(`${getBase()}/v1/models?include_cloud=1`)
-      .then((r) => r.json())
-      .then((d) => {
-        const all: string[] = (d.data || []).map((m: { id: string }) => m.id);
-        // Filter to only cloud models (those matching a known prefix)
-        setCloudModels(all.filter((id) => matchProvider(id) !== null));
-      })
-      .catch(() => {})
-      .finally(() => setCloudLoading(false));
+    Promise.all([
+      fetchProviderStatus(),
+      fetchAvailableModels(),
+    ]).then(([status, pmodels]) => {
+      setProviderModels(pmodels);
+    }).catch(() => {}).finally(() => setCloudLoading(false));
   }, [tab]);
 
-  useEffect(() => {
-    if (pullSuccess) {
-      const t = setTimeout(() => setPullSuccess(null), 3000);
-      return () => clearTimeout(t);
-    }
-  }, [pullSuccess]);
-
-  const handleSelect = async (modelId: string) => {
-    const previousModel = selectedModel;
+  const handleSelect = (modelId: string) => {
     setSelectedModel(modelId);
     setCommandPaletteOpen(false);
-
-    if (modelId !== previousModel) {
-      const { createConversation, setModelLoading, addLogEntry } = useAppStore.getState();
-      createConversation(modelId);
-      setModelLoading(true);
-      addLogEntry({ timestamp: Date.now(), level: 'info', category: 'model', message: `Switching to ${modelId}...` });
-      try {
-        await preloadModel(modelId);
-        addLogEntry({ timestamp: Date.now(), level: 'info', category: 'model', message: `${modelId} loaded` });
-      } catch (e: any) {
-        addLogEntry({ timestamp: Date.now(), level: 'error', category: 'model', message: `Failed to load ${modelId}: ${e.message}` });
-      } finally {
-        setModelLoading(false);
-      }
-    }
   };
 
-  const refreshModels = async () => {
-    try {
-      const m = await fetchModels();
-      setModels(m);
-    } catch {}
-  };
+  const handleSaveKey = async (providerId: string, value: string) => {
+    setSaving(providerId);
+    setSaveMsg(null);
+    const provider = CLOUD_PROVIDERS.find((p) => p.id === providerId);
+    if (!provider) return;
 
-  const handlePull = async (modelId: string) => {
-    setPulling(modelId);
-    setPullError(null);
-    try {
-      await pullModel(modelId);
-      setPullSuccess(modelId);
-      useAppStore.getState().addLogEntry({
-        timestamp: Date.now(), level: 'info', category: 'model',
-        message: `Downloaded ${modelId}`,
-      });
-      await refreshModels();
-      setSelectedModel(modelId);
-    } catch (e: any) {
-      setPullError(e.message || 'Download failed');
-      useAppStore.getState().addLogEntry({
-        timestamp: Date.now(), level: 'error', category: 'model',
-        message: `Download failed for ${modelId}: ${e.message}`,
-      });
-    } finally {
-      setPulling(null);
-    }
-  };
-
-  const handleDelete = async (modelId: string) => {
-    setDeleting(modelId);
-    try {
-      await deleteModel(modelId);
-      useAppStore.getState().addLogEntry({
-        timestamp: Date.now(), level: 'info', category: 'model',
-        message: `Deleted ${modelId}`,
-      });
-      await refreshModels();
-      if (selectedModel === modelId) {
-        const remaining = models.filter((m) => m.id !== modelId);
-        if (remaining.length > 0) setSelectedModel(remaining[0].id);
-      }
-    } catch {} finally {
-      setDeleting(null);
-    }
-  };
-
-  const handleCustomPull = async () => {
-    const name = customModel.trim();
-    if (!name) return;
-    await handlePull(name);
-    setCustomModel('');
-  };
-
-  const handleSaveKey = async (provider: CloudProviderDef, value: string) => {
-    setStoredKey(provider.storageKey, value);
-    setApiKeys((prev) => ({ ...prev, [provider.storageKey]: value }));
-
-    // Also save to Tauri backend so the server process picks up the key
-    if (isTauri()) {
-      try {
-        const { invoke } = await import('@tauri-apps/api/core');
-        await invoke('save_cloud_key', { keyName: provider.envKey, keyValue: value });
-      } catch {}
+    if (!value) {
+      // Clearing key
+      const result = await configureProvider(providerId, '', '');
+      setApiKeys((prev) => ({ ...prev, [providerId]: '' }));
+      setSaveMsg({ type: 'success', text: 'Key removed' });
+      setSaving(null);
+      // Refresh
+      const [status, pmodels] = await Promise.all([fetchProviderStatus(), fetchAvailableModels()]);
+      setProviderModels(pmodels);
+      return;
     }
 
-    // Also sync to the backend server (POST /v1/cloud/keys)
-    try {
-      const keys: Record<string, string> = { [provider.envKey]: value };
-      // For custom provider, also send base URL if configured
-      if (provider.envKey === 'CUSTOM_API_KEY') {
-        keys['OPENAI_BASE_URL'] = getStoredKey('freya-custom-base-url');
-      }
-      fetch('/v1/cloud/keys', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keys }),
-      });
-    } catch {}
-
-    useAppStore.getState().addLogEntry({
-      timestamp: Date.now(), level: 'info', category: 'model',
-      message: `${provider.name} API key ${value ? 'saved' : 'removed'}. Refreshing model list…`,
-    });
-
-    // Refresh cloud models after saving a key
-    await refreshCloudModels();
-  };
-
-  const refreshCloudModels = async () => {
-    setCloudLoading(true);
-    try {
-      const r = await fetch(`${getBase()}/v1/models?include_cloud=1`);
-      const d = await r.json();
-      const all: string[] = (d.data || []).map((m: { id: string }) => m.id);
-      setCloudModels(all.filter((id) => matchProvider(id) !== null));
-    } catch {} finally {
-      setCloudLoading(false);
+    const result = await configureProvider(providerId, value, provider.defaultBaseUrl);
+    if (result.success) {
+      setApiKeys((prev) => ({ ...prev, [providerId]: value }));
+      setSaveMsg({ type: 'success', text: 'Connected!' });
+      // Refresh models
+      const [status, pmodels] = await Promise.all([fetchProviderStatus(), fetchAvailableModels()]);
+      setProviderModels(pmodels);
+      // Refresh main model list
+      fetchModels().then(setModels).catch(() => {});
+    } else {
+      setSaveMsg({ type: 'error', text: result.message });
     }
+    setSaving(null);
+    setTimeout(() => setSaveMsg(null), 3000);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -259,16 +103,10 @@ export function CommandPalette() {
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setSelectedIdx((i) => Math.max(i - 1, 0));
-    } else if (e.key === 'Enter' && tab === 'installed' && filtered.length > 0) {
+    } else if (e.key === 'Enter' && tab === 'models' && filtered.length > 0) {
       e.preventDefault();
-      handleSelect((filtered[selectedIdx] as any).id);
+      handleSelect(filtered[selectedIdx].id);
     }
-  };
-
-  const TAB_LABELS: Record<Tab, string> = {
-    installed: `Installed Models (${models.length})`,
-    catalogue: 'Download',
-    cloud: 'Cloud Models',
   };
 
   return (
@@ -289,7 +127,7 @@ export function CommandPalette() {
       >
         {/* Tabs */}
         <div className="flex" style={{ borderBottom: '1px solid var(--color-border)' }}>
-          {(['installed', 'catalogue', 'cloud'] as Tab[]).map((t) => (
+          {(['models', 'providers'] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -300,13 +138,13 @@ export function CommandPalette() {
                 background: 'transparent',
               }}
             >
-              {TAB_LABELS[t]}
+              {t === 'models' ? `Models (${models.length})` : 'Providers'}
             </button>
           ))}
         </div>
 
-        {/* Search (not for cloud tab) */}
-        {tab !== 'cloud' && (
+        {/* Search */}
+        {tab === 'models' && (
           <div
             className="flex items-center gap-3 px-4 py-3"
             style={{ borderBottom: '1px solid var(--color-border)' }}
@@ -318,7 +156,7 @@ export function CommandPalette() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={tab === 'installed' ? 'Search installed models...' : 'Search models to download...'}
+              placeholder="Search available models..."
               className="flex-1 bg-transparent outline-none text-sm"
               style={{ color: 'var(--color-text)' }}
             />
@@ -332,145 +170,85 @@ export function CommandPalette() {
           </div>
         )}
 
-        {/* Status messages */}
-        {pullError && (
-          <div className="px-4 py-2 text-xs" style={{ color: 'var(--color-error)', background: 'rgba(220,38,38,0.05)' }}>
-            {pullError}
-          </div>
-        )}
-        {pullSuccess && (
-          <div className="px-4 py-2 text-xs flex items-center gap-1.5" style={{ color: 'var(--color-success)', background: 'color-mix(in srgb, var(--color-success) 5%, transparent)' }}>
-            <Check size={12} /> Downloaded {pullSuccess} successfully
+        {/* Save message */}
+        {saveMsg && (
+          <div
+            className="px-4 py-2 text-xs"
+            style={{
+              color: saveMsg.type === 'success' ? 'var(--color-success)' : 'var(--color-error)',
+              background: saveMsg.type === 'success'
+                ? 'color-mix(in srgb, var(--color-success) 5%, transparent)'
+                : 'color-mix(in srgb, var(--color-error) 5%, transparent)',
+            }}
+          >
+            {saveMsg.text}
           </div>
         )}
 
         {/* Results */}
         <div className="max-h-[400px] overflow-y-auto py-2">
-          {tab === 'installed' ? (
+          {tab === 'models' ? (
             filtered.length === 0 ? (
               <div className="px-4 py-6 text-center text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
                 {models.length === 0
-                  ? 'No models available — switch to "Download" to get started'
+                  ? 'No models available. Add API keys in the Providers tab.'
                   : 'No matching models'}
               </div>
             ) : (
-              (filtered as typeof models).map((model, idx) => {
+              filtered.map((model, idx) => {
                 const isActive = model.id === selectedModel;
                 const isSelected = idx === selectedIdx;
-                const isDeleting = deleting === model.id;
                 return (
-                  <div
+                  <button
                     key={model.id}
-                    className="flex items-center gap-3 w-full px-4 py-2.5 transition-colors"
+                    onClick={() => handleSelect(model.id)}
+                    className="flex items-center gap-3 w-full px-4 py-2.5 transition-colors text-left cursor-pointer"
                     style={{ background: isSelected ? 'var(--color-bg-secondary)' : 'transparent' }}
                     onMouseEnter={() => setSelectedIdx(idx)}
                   >
-                    <button
-                      onClick={() => handleSelect(model.id)}
-                      className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer"
-                      style={{ background: 'none', border: 'none', padding: 0 }}
-                    >
-                      <Cpu size={16} style={{ color: isActive ? 'var(--color-accent)' : 'var(--color-text-tertiary)' }} />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm truncate" style={{ color: isActive ? 'var(--color-accent)' : 'var(--color-text)', fontWeight: isActive ? 500 : 400 }}>
-                          {model.id}
-                        </div>
+                    <Cloud size={16} style={{ color: isActive ? 'var(--color-accent)' : 'var(--color-text-tertiary)' }} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm truncate" style={{ color: isActive ? 'var(--color-accent)' : 'var(--color-text)', fontWeight: isActive ? 500 : 400 }}>
+                        {model.id}
                       </div>
-                      {isActive && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'var(--color-accent-subtle)', color: 'var(--color-accent)' }}>
-                          Active
-                        </span>
-                      )}
-                    </button>
-                    <button
-                      onClick={() => handleDelete(model.id)}
-                      disabled={isDeleting}
-                      className="p-1 rounded transition-colors cursor-pointer"
-                      style={{ color: 'var(--color-text-tertiary)', opacity: 0 }}
-                      title="Delete model"
-                      onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = 'var(--color-error)'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.opacity = '0'; e.currentTarget.style.color = 'var(--color-text-tertiary)'; }}
-                    >
-                      {isDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                    </button>
-                  </div>
+                    </div>
+                    {isActive && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'var(--color-accent-subtle)', color: 'var(--color-accent)' }}>
+                        Active
+                      </span>
+                    )}
+                  </button>
                 );
               })
             )
-          ) : tab === 'catalogue' ? (
-            <>
-              {(filtered as typeof CATALOGUE_MODELS).map((model) => {
-                const isPulling = pulling === model.id;
-                const justInstalled = pullSuccess === model.id;
-                return (
-                  <div key={model.id} className="flex items-center gap-3 w-full px-4 py-2.5">
-                    <Download size={16} style={{ color: 'var(--color-text-tertiary)' }} />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm truncate" style={{ color: 'var(--color-text)' }}>{model.id}</div>
-                      <div className="text-[11px]" style={{ color: 'var(--color-text-tertiary)' }}>{model.desc} &middot; {model.size}</div>
-                    </div>
-                    <button
-                      onClick={() => handlePull(model.id)}
-                      disabled={isPulling || !!pulling}
-                      className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium cursor-pointer"
-                      style={{
-                        background: justInstalled ? 'var(--color-accent-subtle)' : 'var(--color-accent)',
-                        color: justInstalled ? 'var(--color-accent)' : 'var(--color-on-accent)',
-                        opacity: (isPulling || (pulling && !isPulling)) ? 0.5 : 1,
-                      }}
-                    >
-                      {isPulling ? <><Loader2 size={12} className="animate-spin" /> Downloading...</> :
-                       justInstalled ? <><Check size={12} /> Installed</> :
-                       <><Download size={12} /> Download</>}
-                    </button>
-                  </div>
-                );
-              })}
-              <div className="px-4 py-3 mt-1" style={{ borderTop: '1px solid var(--color-border)' }}>
-                <div className="text-[11px] mb-2" style={{ color: 'var(--color-text-tertiary)' }}>Or enter any Ollama model name:</div>
-                <div className="flex gap-2">
-                  <input
-                    type="text" value={customModel}
-                    onChange={(e) => setCustomModel(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleCustomPull(); } }}
-                    placeholder="e.g. codellama:7b"
-                    className="flex-1 text-sm px-3 py-1.5 rounded-lg outline-none"
-                    style={{ background: 'var(--color-bg-secondary)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }}
-                  />
-                  <button
-                    onClick={handleCustomPull} disabled={!customModel.trim() || !!pulling}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer"
-                    style={{ background: 'var(--color-accent)', color: 'var(--color-on-accent)', opacity: (!customModel.trim() || pulling) ? 0.5 : 1 }}
-                  >
-                    <Download size={12} /> Pull
-                  </button>
-                </div>
-              </div>
-            </>
           ) : (
-            /* ── Cloud Models tab (dynamic) ── */
+            /* Providers tab */
             <div className="px-4 py-2">
               <div className="text-[11px] mb-3" style={{ color: 'var(--color-text-tertiary)' }}>
-                Add your API keys to use cloud models. Keys are stored locally on your device only.
+                Add API keys to connect cloud providers. Keys are stored locally.
               </div>
 
               {cloudLoading ? (
-                <div className="text-xs py-4 text-center" style={{ color: 'var(--color-text-tertiary)' }}>Loading models…</div>
+                <div className="text-xs py-4 text-center" style={{ color: 'var(--color-text-tertiary)' }}>
+                  <Loader2 size={14} className="animate-spin inline mr-1" />
+                  Loading providers...
+                </div>
               ) : (
-                CLOUD_PROVIDER_DEFS.map((provider) => {
-                  const key = apiKeys[provider.storageKey] || '';
+                CLOUD_PROVIDERS.filter((p) => p.id !== 'custom').map((provider) => {
+                  const key = apiKeys[provider.id] || '';
                   const hasKey = !!key;
-                  const isVisible = showKeys[provider.storageKey];
-                  const providerModels = cloudModels.filter((id) => matchProvider(id)?.storageKey === provider.storageKey);
+                  const isVisible = showKeys[provider.id];
+                  const pm = providerModels.find((p) => p.id === provider.id);
+                  const modelCount = pm?.models?.length || 0;
 
                   return (
-                    <div key={provider.name} className="mb-4">
+                    <div key={provider.id} className="mb-4">
                       <div className="flex items-center gap-2 mb-2">
-                        <Cloud size={14} style={{ color: hasKey ? 'var(--color-success)' : 'var(--color-text-tertiary)' }} />
+                        <span className="text-base">{provider.icon}</span>
                         <span className="text-xs font-medium" style={{ color: 'var(--color-text)' }}>{provider.name}</span>
                         {hasKey && (
                           <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'color-mix(in srgb, var(--color-success) 10%, transparent)', color: 'var(--color-success)' }}>
-                            {providerModels.length > 0 ? `${providerModels.length} models` : 'Connected'}
+                            {modelCount > 0 ? `${modelCount} models` : 'Connected'}
                           </span>
                         )}
                       </div>
@@ -482,14 +260,19 @@ export function CommandPalette() {
                           <input
                             type={isVisible ? 'text' : 'password'}
                             value={key}
-                            onChange={(e) => setApiKeys((prev) => ({ ...prev, [provider.storageKey]: e.target.value }))}
-                            onBlur={() => handleSaveKey(provider, apiKeys[provider.storageKey] || '')}
-                            placeholder={`${provider.envKey}`}
+                            onChange={(e) => setApiKeys((prev) => ({ ...prev, [provider.id]: e.target.value }))}
+                            onBlur={(e) => {
+                              const newVal = e.target.value;
+                              if (newVal !== (apiKeys[provider.id] || '')) {
+                                handleSaveKey(provider.id, newVal);
+                              }
+                            }}
+                            placeholder={provider.apiKeyPlaceholder}
                             className="flex-1 text-xs px-2 py-1.5 bg-transparent outline-none font-mono"
                             style={{ color: 'var(--color-text)' }}
                           />
                           <button
-                            onClick={() => setShowKeys((prev) => ({ ...prev, [provider.storageKey]: !prev[provider.storageKey] }))}
+                            onClick={() => setShowKeys((prev) => ({ ...prev, [provider.id]: !prev[provider.id] }))}
                             className="px-2 cursor-pointer" style={{ color: 'var(--color-text-tertiary)' }}
                           >
                             {isVisible ? <EyeOff size={12} /> : <Eye size={12} />}
@@ -497,19 +280,22 @@ export function CommandPalette() {
                         </div>
                         {hasKey && (
                           <button
-                            onClick={() => handleSaveKey(provider, '')}
+                            onClick={() => handleSaveKey(provider.id, '')}
                             className="px-2 py-1 rounded-lg text-[10px] cursor-pointer"
                             style={{ color: 'var(--color-error)', border: '1px solid var(--color-error)' }}
                           >
                             Remove
                           </button>
                         )}
+                        {saving === provider.id && (
+                          <Loader2 size={14} className="animate-spin self-center" style={{ color: 'var(--color-accent)' }} />
+                        )}
                       </div>
 
-                      {/* Models for this provider (dynamic from API) */}
-                      {hasKey && providerModels.length > 0 && (
-                        <div className="ml-5 flex flex-col gap-1">
-                          {providerModels.map((modelId) => {
+                      {/* Available models */}
+                      {hasKey && modelCount > 0 && (
+                        <div className="ml-6 flex flex-col gap-1">
+                          {pm!.models.map((modelId) => {
                             const isActive = modelId === selectedModel;
                             return (
                               <button
@@ -537,11 +323,9 @@ export function CommandPalette() {
                         </div>
                       )}
 
-                      {hasKey && providerModels.length === 0 && !cloudLoading && (
-                        <div className="ml-5 text-[10px]" style={{ color: 'var(--color-text-tertiary)' }}>
-                          {provider.name === 'Custom'
-                            ? 'Configure Base URL + Models in Settings → API Keys → Custom'
-                            : 'No models available — check your key or pull models first'}
+                      {hasKey && modelCount === 0 && !cloudLoading && (
+                        <div className="ml-6 text-[10px]" style={{ color: 'var(--color-text-tertiary)' }}>
+                          No models available — verify your API key
                         </div>
                       )}
                     </div>
@@ -557,16 +341,14 @@ export function CommandPalette() {
           className="flex items-center gap-4 px-4 py-2 text-[11px]"
           style={{ borderTop: '1px solid var(--color-border)', color: 'var(--color-text-tertiary)' }}
         >
-          {tab === 'installed' ? (
+          {tab === 'models' ? (
             <>
               <span><kbd className="font-mono">↑↓</kbd> Navigate</span>
               <span><kbd className="font-mono">Enter</kbd> Select</span>
               <span><kbd className="font-mono">Esc</kbd> Close</span>
             </>
-          ) : tab === 'catalogue' ? (
-            <span>Models are downloaded from the Ollama registry</span>
           ) : (
-            <span>API keys are stored locally and never sent to Freya servers</span>
+            <span>API keys stored locally, never sent to Freya servers</span>
           )}
         </div>
       </div>

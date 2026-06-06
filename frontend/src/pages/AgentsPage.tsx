@@ -26,7 +26,6 @@ import {
   saveToolCredentials,
   fetchModels,
   updateManagedAgent,
-  fetchRecommendedModel,
   sendblueVerify,
   sendblueRegisterWebhook,
   sendblueTest,
@@ -673,16 +672,16 @@ function LaunchWizard({
   const models = useAppStore((s) => s.models);
 
   useEffect(() => {
-    fetchRecommendedModel().then((r) => {
-      setRecommendedModel(r.model);
-      if (!wizard.model) {
-        setWizard((w) => ({ ...w, model: r.model }));
-      }
-    }).catch(() => {});
+    // Use first available model as default for new agents
+    const firstModel = models.length > 0 ? models[0].id : '';
+    setRecommendedModel(firstModel);
+    if (!wizard.model && firstModel) {
+      setWizard((w) => ({ ...w, model: firstModel }));
+    }
     fetchAvailableTools().then((tools) => {
       setAvailableTools(tools);
     }).catch(() => {});
-  }, []);
+  }, [models]);
 
   function selectTemplate(tpl: AgentTemplate | null) {
     if (tpl) {

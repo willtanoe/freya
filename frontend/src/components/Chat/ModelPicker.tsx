@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Cpu, ChevronDown, Search, Check, Loader2 } from 'lucide-react';
+import { Cloud, ChevronDown, Search, Check, Loader2 } from 'lucide-react';
 import { useAppStore } from '../../lib/store';
 import {
   fetchProviderStatus,
@@ -87,7 +87,7 @@ export function ModelPickerButton() {
         }}
         title="Change model"
       >
-        <Cpu size={12} />
+        <Cloud size={12} />
         <span className="max-w-[120px] truncate">
           {modelLoading ? '...' : selectedModel || 'Pick model'}
         </span>

@@ -9,7 +9,6 @@ import { AgentsPage } from './pages/AgentsPage';
 import { DataSourcesPage } from './pages/DataSourcesPage';
 import { LogsPage } from './pages/LogsPage';
 import { CommandPalette } from './components/CommandPalette';
-import { SetupScreen } from './components/SetupScreen';
 import { Toaster } from './components/ui/sonner';
 import { useAppStore } from './lib/store';
 import { fetchModels, fetchServerInfo, fetchSavings, submitSavings, isTauri } from './lib/api';
@@ -19,33 +18,17 @@ import { track, hashId } from './lib/analytics';
 import { OnboardingFlow } from './components/setup/OnboardingFlow';
 
 export default function App() {
-  // Onboarding is done when: Settings has inferenceMode OR old localStorage flag set.
-  // This ensures onboarding shows on first launch regardless of Tauri vs browser dev.
-  const settings = useAppStore((s) => s.settings);
+  // Onboarding shown on first launch when no setup completed flag exists
   const [setupDone, setSetupDone] = useState(
-    !!settings.inferenceMode || !!localStorage.getItem('oj-setup-completed'),
+    !!localStorage.getItem('freya-setup-completed'),
   );
-  const [showSetupScreen, setShowSetupScreen] = useState(false);
 
-  // After onboarding choice, if local mode was selected, show the Ollama setup screen.
   const handleOnboardingComplete = useCallback(() => {
-    if (!localStorage.getItem('oj-setup-completed')) {
-      localStorage.setItem('oj-setup-completed', '1');
-      track('setup_completed', { preset: 'default' });
-    }
-    // If local mode, also show the Ollama setup screen first.
-    // Otherwise go straight to the main app.
-    if (settings.inferenceMode === 'local') {
-      setShowSetupScreen(true);
-    } else {
-      setSetupDone(true);
-    }
-  }, [settings.inferenceMode]);
-
-  const handleSetupReady = useCallback(() => {
-    setShowSetupScreen(false);
+    localStorage.setItem('freya-setup-completed', '1');
+    track('setup_completed', { mode: 'cloud' });
     setSetupDone(true);
   }, []);
+
   const prevModelRef = useRef<string>('');
   const setModels = useAppStore((s) => s.setModels);
   const setModelsLoading = useAppStore((s) => s.setModelsLoading);
@@ -63,7 +46,6 @@ export default function App() {
   const optInModalOpen = useAppStore((s) => s.optInModalOpen);
   const setOptInModalOpen = useAppStore((s) => s.setOptInModalOpen);
   const markOptInModalSeen = useAppStore((s) => s.markOptInModalSeen);
-  const savings = useAppStore((s) => s.savings);
 
   // Apply theme class to <html>
   useEffect(() => {
@@ -84,6 +66,7 @@ export default function App() {
 
   // Fetch models on mount
   useEffect(() => {
+    if (!setupDone) return;
     fetchModels()
       .then((m) => {
         setModels(m);
@@ -91,15 +74,17 @@ export default function App() {
       })
       .catch(() => setModels([]))
       .finally(() => setModelsLoading(false));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [setupDone]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch server info
   useEffect(() => {
+    if (!setupDone) return;
     fetchServerInfo().then(setServerInfo).catch(() => {});
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [setupDone]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Poll savings and optionally share to Supabase
   useEffect(() => {
+    if (!setupDone) return;
     const refresh = () =>
       fetchSavings()
         .then((data) => {
@@ -134,19 +119,17 @@ export default function App() {
     refresh();
     const interval = setInterval(refresh, 30000);
     return () => clearInterval(interval);
-  }, [optInEnabled, optInDisplayName, optInAnonId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [setupDone, optInEnabled, optInDisplayName, optInAnonId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Show opt-in modal on first visit — only after onboarding is complete
   useEffect(() => {
-    if (setupDone && !showSetupScreen && !optInModalSeen) {
+    if (setupDone && !optInModalSeen) {
       setOptInModalOpen(true);
       markOptInModalSeen();
     }
-  }, [setupDone, showSetupScreen, optInModalSeen]);
+  }, [setupDone, optInModalSeen]);
 
-  // Fire model_changed when the user switches models. First mount is
-  // not a "change" — only emit when both prev and current are real and
-  // differ.
+  // Fire model_changed when the user switches models
   useEffect(() => {
     const prev = prevModelRef.current;
     const curr = selectedModel || '';
@@ -164,9 +147,7 @@ export default function App() {
     })();
   }, [selectedModel]);
 
-  // app_opened — one-shot per app launch, fires after analytics has had
-  // a chance to initialize. platform + version are super-properties
-  // registered in analytics.ts initAnalytics, so no per-call props needed.
+  // app_opened — one-shot per app launch
   useEffect(() => {
     const t = setTimeout(() => {
       track('app_opened', {});
@@ -175,6 +156,7 @@ export default function App() {
   }, []);
 
   const toggleSystemPanel = useAppStore((s) => s.toggleSystemPanel);
+  const settings = useAppStore((s) => s.settings);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -192,15 +174,9 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [commandPaletteOpen, setCommandPaletteOpen, toggleSystemPanel]);
 
-
-  // Show onboarding flow first (Local vs Cloud choice)
+  // Show onboarding on first launch
   if (!setupDone) {
     return <OnboardingFlow onComplete={handleOnboardingComplete} />;
-  }
-
-  // After onboarding, if local mode was selected, show Ollama setup screen
-  if (showSetupScreen) {
-    return <SetupScreen onReady={handleSetupReady} />;
   }
 
   return (

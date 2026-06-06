@@ -103,30 +103,6 @@ async function tauriInvoke<T>(command: string, args: Record<string, unknown> = {
 }
 
 // ---------------------------------------------------------------------------
-// Setup status (desktop only)
-// ---------------------------------------------------------------------------
-
-export interface SetupStatus {
-  phase: string;
-  detail: string;
-  ollama_ready: boolean;
-  server_ready: boolean;
-  model_ready: boolean;
-  error: string | null;
-  source?: 'ollama' | 'custom'; // drives source-aware setup labels
-}
-
-export async function getSetupStatus(): Promise<SetupStatus | null> {
-  if (!isTauri()) return null;
-  try {
-    const { invoke } = await import('@tauri-apps/api/core');
-    return await invoke<SetupStatus>('get_setup_status');
-  } catch {
-    return null;
-  }
-}
-
-// ---------------------------------------------------------------------------
 // API functions
 // ---------------------------------------------------------------------------
 
@@ -143,77 +119,6 @@ export async function fetchModels(): Promise<ModelInfo[]> {
   if (!res.ok) throw new Error(`Failed to fetch models: ${res.status}`);
   const data = await res.json();
   return data.data || [];
-}
-
-export async function fetchRecommendedModel(): Promise<{ model: string; reason: string }> {
-  const res = await apiFetch(`/v1/recommended-model`);
-  if (!res.ok) return { model: '', reason: 'Failed to fetch' };
-  return res.json();
-}
-
-export async function pullModel(modelName: string): Promise<void> {
-  // In Tauri, go through the Rust backend directly (avoids CORS / timeout
-  // issues with long model downloads via fetch).
-  if (isTauri()) {
-    try {
-      const { invoke } = await import('@tauri-apps/api/core');
-      await invoke('pull_ollama_model', { modelName });
-      return;
-    } catch (e: any) {
-      throw new Error(e?.message || e || 'Download failed');
-    }
-  }
-  const res = await apiFetch(`/v1/models/pull`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: modelName }),
-  });
-  if (!res.ok) {
-    const detail = await res.text().catch(() => res.statusText);
-    throw new Error(`Failed to pull model: ${detail}`);
-  }
-}
-
-export async function deleteModel(modelName: string): Promise<void> {
-  if (isTauri()) {
-    try {
-      const { invoke } = await import('@tauri-apps/api/core');
-      await invoke('delete_ollama_model', { modelName });
-      return;
-    } catch (e: any) {
-      throw new Error(e?.message || e || 'Delete failed');
-    }
-  }
-  const res = await apiFetch(`/v1/models/${encodeURIComponent(modelName)}`, {
-    method: 'DELETE',
-  });
-  if (!res.ok) {
-    const detail = await res.text().catch(() => res.statusText);
-    throw new Error(`Failed to delete model: ${detail}`);
-  }
-}
-
-const _CLOUD_PREFIXES = ['gpt-', 'o1-', 'o3-', 'o4-', 'claude-', 'gemini-', 'openrouter/'];
-
-export async function preloadModel(modelName: string): Promise<void> {
-  // Cloud models don't need Ollama preloading
-  if (_CLOUD_PREFIXES.some(p => modelName.startsWith(p))) {
-    return;
-  }
-  // Trigger Ollama to load the model into memory (empty prompt, no generation).
-  const ollamaUrl = 'http://127.0.0.1:11434';
-  try {
-    const res = await fetch(`${ollamaUrl}/api/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: modelName, prompt: '', keep_alive: '5m' }),
-      signal: AbortSignal.timeout(120_000),
-    });
-    if (!res.ok) throw new Error(`Preload failed: ${res.status}`);
-  } catch (e: any) {
-    if (e.name === 'TimeoutError') throw new Error('Model load timed out (120s)');
-    throw e;
-  }
 }
 
 export async function fetchSavings(): Promise<SavingsData> {
@@ -1029,45 +934,4 @@ export async function denyAction(actionId: string): Promise<void> {
   if (!res.ok) throw new Error(`Failed: ${res.status}`);
 }
 
-// ---------------------------------------------------------------------------
-// Inference source (desktop only)
-// ---------------------------------------------------------------------------
 
-export type InferenceSource = {
-  kind: 'ollama' | 'custom';
-  model?: string;
-  host?: string;
-  engine?: string;
-};
-
-export async function getInferenceSource(): Promise<InferenceSource> {
-  if (isTauri()) {
-    try {
-      const { invoke } = await import('@tauri-apps/api/core');
-      return await invoke<InferenceSource>('get_inference_source');
-    } catch (e: any) {
-      throw new Error(e?.message ?? e ?? 'Failed to read inference source');
-    }
-  }
-  return { kind: 'ollama' };
-}
-
-export async function setInferenceSource(
-  src: InferenceSource & { apiKey?: string },
-): Promise<void> {
-  if (!isTauri()) throw new Error('Inference source is configurable in the desktop app only.');
-  try {
-    const { invoke } = await import('@tauri-apps/api/core');
-    await invoke<void>('set_inference_source', {
-      kind: src.kind,
-      model: src.model ?? null,
-      host: src.host ?? null,
-      engine: src.engine ?? null,
-      apiKey: src.apiKey ?? null,
-    });
-  } catch (e: any) {
-    // Surface the backend's actionable error strings (e.g. "A server URL is
-    // required…", "Could not store the API key…") as proper Error instances.
-    throw new Error(e?.message ?? e ?? 'Failed to save inference source');
-  }
-}

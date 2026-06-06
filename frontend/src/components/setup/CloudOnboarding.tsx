@@ -11,7 +11,6 @@ import {
   AlertCircle,
   RefreshCw,
 } from 'lucide-react';
-import { useAppStore } from '../../lib/store';
 import {
   CLOUD_PROVIDERS,
   fetchProviderStatus,
@@ -30,7 +29,6 @@ export function CloudOnboarding({
 }: {
   onComplete: () => void;
 }) {
-  const updateSettings = useAppStore((s) => s.updateSettings);
   const [providerStatus, setProviderStatus] = useState<ProviderConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
@@ -55,7 +53,6 @@ export function CloudOnboarding({
   };
 
   const handleFinish = () => {
-    updateSettings({ inferenceMode: 'cloud' });
     onComplete();
   };
 
@@ -79,16 +76,28 @@ export function CloudOnboarding({
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="mb-6">
-        <div
-          className="flex items-center gap-2 mb-2 text-xs font-semibold uppercase tracking-wider"
-          style={{ color: 'var(--color-accent)' }}
-        >
-          <Cloud size={14} />
-          Cloud Setup
+        <div className="flex items-center gap-3 mb-3">
+          <img
+            src="/logo.ico"
+            alt="Freya"
+            className="w-10 h-10 rounded-lg"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
+          <div>
+            <div
+              className="flex items-center gap-2 mb-0.5 text-xs font-semibold uppercase tracking-wider"
+              style={{ color: 'var(--color-accent)' }}
+            >
+              <Cloud size={12} />
+              Cloud Setup
+            </div>
+            <h2 className="text-xl font-bold" style={{ color: 'var(--color-text)' }}>
+              Connect cloud providers
+            </h2>
+          </div>
         </div>
-        <h2 className="text-xl font-bold mb-1" style={{ color: 'var(--color-text)' }}>
-          Connect cloud providers
-        </h2>
         <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
           Configure your API keys. Only providers with keys will show models.
         </p>
@@ -190,10 +199,7 @@ export function CloudOnboarding({
         </button>
 
         <button
-          onClick={() => {
-            updateSettings({ inferenceMode: 'cloud' });
-            onComplete();
-          }}
+          onClick={() => onComplete()}
           className="w-full mt-2 py-2 text-xs transition-colors"
           style={{ color: 'var(--color-text-tertiary)', cursor: 'pointer' }}
         >
@@ -281,7 +287,17 @@ function ConfigureProviderView({
         </button>
 
         <div className="flex items-center gap-3">
-          <span className="text-3xl">{provider.icon}</span>
+          <div className="flex items-center gap-2">
+            <img
+              src="/logo.ico"
+              alt="Freya"
+              className="w-8 h-8 rounded-md"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
+            <span className="text-3xl">{provider.icon}</span>
+          </div>
           <div>
             <h2 className="text-xl font-bold" style={{ color: 'var(--color-text)' }}>
               Configure {provider.name}

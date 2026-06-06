@@ -5,18 +5,16 @@ import {
   Plus,
   BarChart3,
   Settings,
-  Search,
   PanelLeftClose,
   PanelLeft,
-  Cpu,
-  Rocket,
-  Bot,
   Sun,
   Moon,
   Monitor,
   Loader2,
-  ScrollText,
+  Bot,
   Database,
+  ScrollText,
+  Cloud,
 } from 'lucide-react';
 import { ConversationList } from './ConversationList';
 import { useAppStore } from '../../lib/store';
@@ -24,7 +22,6 @@ import { useAppStore } from '../../lib/store';
 export function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchQuery, setSearchQuery] = useState('');
 
   const sidebarOpen = useAppStore((s) => s.sidebarOpen);
   const toggleSidebar = useAppStore((s) => s.toggleSidebar);
@@ -43,7 +40,6 @@ export function Sidebar() {
 
   const messages = useAppStore((s) => s.messages);
   const handleNewChat = () => {
-    // Don't create a new chat if the current one is empty
     if (messages.length === 0) {
       navigate('/');
       return;
@@ -59,7 +55,6 @@ export function Sidebar() {
     { path: '/agents', icon: Bot, label: 'Agents' },
     { path: '/logs', icon: ScrollText, label: 'Logs' },
     { path: '/settings', icon: Settings, label: 'Settings' },
-    { path: '/get-started', icon: Rocket, label: 'Get Started' },
   ];
 
   return (
@@ -91,17 +86,33 @@ export function Sidebar() {
         }}
       >
         <div className="flex flex-col h-full w-[260px]">
-          {/* Header */}
+          {/* Header — Logo + Brand */}
           <div className="flex items-center justify-between px-3 pt-3 pb-2">
-            <button
-              onClick={toggleSidebar}
-              className="p-2 rounded-lg transition-colors cursor-pointer"
-              style={{ color: 'var(--color-text-secondary)' }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-bg-tertiary)')}
-              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-            >
-              <PanelLeftClose size={18} />
-            </button>
+            <div className="flex items-center gap-2">
+              <img
+                src="/logo.ico"
+                alt="Freya"
+                className="w-7 h-7 rounded-md"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+              <span
+                className="text-sm font-bold tracking-tight"
+                style={{ color: 'var(--color-text)' }}
+              >
+                Freya
+              </span>
+              <span
+                className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
+                style={{
+                  background: 'var(--color-accent-subtle)',
+                  color: 'var(--color-accent)',
+                }}
+              >
+                Cloud
+              </span>
+            </div>
             <div className="flex items-center gap-1">
               <button
                 onClick={() => updateSettings({ theme: nextTheme })}
@@ -123,72 +134,61 @@ export function Sidebar() {
               >
                 <Plus size={18} />
               </button>
+              <button
+                onClick={toggleSidebar}
+                className="p-2 rounded-lg transition-colors cursor-pointer"
+                style={{ color: 'var(--color-text-secondary)' }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-bg-tertiary)')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              >
+                <PanelLeftClose size={16} />
+              </button>
             </div>
           </div>
 
-          {/* Model badge */}
+          {/* Model selector */}
           <button
             onClick={() => setCommandPaletteOpen(true)}
-            className="mx-3 mb-2 flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-colors cursor-pointer"
+            className="mx-3 mb-2 flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs transition-all cursor-pointer"
             style={{
               background: 'var(--color-bg-secondary)',
-              color: 'var(--color-text-secondary)',
               border: '1px solid var(--color-border)',
+              color: 'var(--color-text-secondary)',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-bg-tertiary)')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--color-bg-secondary)')}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = 'var(--color-accent)';
+              e.currentTarget.style.background = 'var(--color-accent-subtle)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = 'var(--color-border)';
+              e.currentTarget.style.background = 'var(--color-bg-secondary)';
+            }}
           >
+            <Cloud size={14} style={{ color: modelLoading ? undefined : 'var(--color-accent)' }} />
             {modelLoading ? (
               <Loader2 size={14} className="animate-spin" style={{ color: 'var(--color-accent)' }} />
-            ) : (
-              <Cpu size={14} />
-            )}
-            <div className="flex-1 min-w-0">
+            ) : null}
+            <div className="flex-1 min-w-0 text-left">
               <span
-                className="truncate block text-left"
+                className="truncate block"
                 style={{ color: deepResearch ? 'var(--color-accent)' : 'var(--color-text)' }}
               >
                 {deepResearch
                   ? 'Deep Research'
-                  : selectedModel || serverInfo?.model || 'Select model'}
+                  : selectedModel || 'Select model'}
               </span>
-              {modelLoading && (
-                <span className="text-[10px] block text-left" style={{ color: 'var(--color-accent)' }}>
-                  Loading model...
-                </span>
-              )}
             </div>
-            {!modelLoading && (
-              <kbd
-                className="text-[10px] px-1.5 py-0.5 rounded font-mono"
-                style={{ background: 'var(--color-bg-tertiary)', color: 'var(--color-text-tertiary)' }}
-              >
-                ⌘K
-              </kbd>
-            )}
-          </button>
-
-          {/* Search */}
-          <div className="px-3 mb-2">
-            <div
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm"
-              style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}
+            <kbd
+              className="text-[10px] px-1.5 py-0.5 rounded font-mono"
+              style={{ background: 'var(--color-bg-tertiary)', color: 'var(--color-text-tertiary)' }}
             >
-              <Search size={14} style={{ color: 'var(--color-text-tertiary)' }} />
-              <input
-                type="text"
-                placeholder="Search chats..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 bg-transparent outline-none text-sm"
-                style={{ color: 'var(--color-text)' }}
-              />
-            </div>
-          </div>
+              ⌘K
+            </kbd>
+          </button>
 
           {/* Conversation list */}
           <div className="flex-1 overflow-y-auto px-2">
-            <ConversationList searchQuery={searchQuery} />
+            <ConversationList searchQuery="" />
           </div>
 
           {/* Bottom nav */}
