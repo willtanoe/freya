@@ -9,7 +9,7 @@ PowerShell, without WSL2 or Docker.
 In an elevated-or-regular PowerShell:
 
 ```powershell
-irm https://freya-ai.github.io/Freya/install.ps1 | iex
+irm https://willtanoe.github.io/freya/install.ps1 | iex
 ```
 
 What it does:
@@ -39,7 +39,7 @@ absent:
 
 ```powershell
 $env:FREYA_SKIP_SERVICE = '1'
-irm https://freya-ai.github.io/Freya/install.ps1 | iex
+irm https://willtanoe.github.io/freya/install.ps1 | iex
 ```
 
 The available env vars: `FREYA_SKIP_SERVICE`, `FREYA_SERVICE`,
@@ -111,7 +111,7 @@ uv sync --extra server
 Or re-run the installer with `-Force`:
 
 ```powershell
-irm https://freya-ai.github.io/Freya/install.ps1 | iex
+irm https://willtanoe.github.io/freya/install.ps1 | iex
 # (then re-run with the file directly, passing -Force)
 ```
 

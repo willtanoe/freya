@@ -7,7 +7,7 @@ Freya includes a launchd property list (plist) for running the API server as a b
 Before installing the service, ensure that Freya is installed and the `freya` command is available at `/usr/local/bin/freya`. If you installed via `uv` or `pip` with a different prefix, adjust the path in the plist accordingly.
 
 ```bash
-git clone https://github.com/freya-ai/Freya.git && cd Freya && uv sync --extra server
+git clone https://github.com/willtanoe/freya.git && cd Freya && uv sync --extra server
 which freya  # Verify the installation path
 ```
 

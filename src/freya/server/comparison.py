@@ -281,7 +281,7 @@ COMPARISON_HTML = """\
     <div class="cta-sub">Install Freya and run AI locally
       with zero API costs.</div>
     <div class="code-block">
-      <code>git clone https://github.com/freya-ai/Freya.git
+      <code>git clone https://github.com/willtanoe/freya.git
 && cd Freya && uv sync</code>
       <button class="copy-btn" id="copy-btn">Copy</button>
     </div>

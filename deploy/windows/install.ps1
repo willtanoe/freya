@@ -22,10 +22,10 @@
          deploy/windows/freya-service.ps1).
 
     Usage (one-liner):
-      irm https://freya-ai.github.io/Freya/install.ps1 | iex
+      irm https://willtanoe.github.io/freya/install.ps1 | iex
 
     Usage (file invocation, supports flags):
-      irm https://freya-ai.github.io/Freya/install.ps1 -OutFile install.ps1
+      irm https://willtanoe.github.io/freya/install.ps1 -OutFile install.ps1
       .\install.ps1 -SkipService
 
     Flags (when running the file directly):
@@ -260,7 +260,7 @@ if (-not (Test-Path $installRoot)) {
 $repoUrl = if ($env:FREYA_REPO_URL) {
     $env:FREYA_REPO_URL
 } else {
-    'https://github.com/freya-ai/Freya.git'
+    'https://github.com/willtanoe/freya.git'
 }
 
 if (Test-Path (Join-Path $srcDir '.git')) {
@@ -520,5 +520,5 @@ if ($shouldInstallService) {
     Write-Host "           powershell -File `"$serviceScript`" uninstall    (remove)"
 }
 Write-Host ""
-Write-Host "  Docs:    https://freya-ai.github.io/Freya/"
+Write-Host "  Docs:    https://willtanoe.github.io/freya/"
 Write-Host ""

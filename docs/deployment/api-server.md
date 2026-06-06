@@ -7,7 +7,7 @@ Freya includes an OpenAI-compatible API server built on FastAPI and uvicorn. It 
 The server requires the `[server]` extra (FastAPI + uvicorn):
 
 ```bash
-git clone https://github.com/freya-ai/Freya.git
+git clone https://github.com/willtanoe/freya.git
 cd Freya
 uv sync --extra server
 ```

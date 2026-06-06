@@ -1599,7 +1599,7 @@ Session
 | `maturin build` complains about `tikv-jemallocator` | macOS SDK too old | Update macOS / Xcode |
 
 For anything not on this list, capture `~/.freya/logs/mining/` and open
-an issue at https://github.com/freya-ai/Freya/issues.
+an issue at https://github.com/willtanoe/freya/issues.
 
 ## What changes in v2 / v3
 

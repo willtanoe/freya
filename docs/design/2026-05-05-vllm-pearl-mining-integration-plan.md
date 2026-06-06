@@ -2740,7 +2740,7 @@ def _detect_hardware() -> HardwareInfo:
 def mine() -> None:
     """Pearl PoUW mining commands.
 
-    See https://freya-ai.github.io/Freya/user-guide/mining/ for the
+    See https://willtanoe.github.io/freya/user-guide/mining/ for the
     full guide.
     """
 

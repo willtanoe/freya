@@ -18,7 +18,7 @@ contribute code to Freya.
 ### Clone and Install
 
 ```bash
-git clone https://github.com/freya-ai/Freya.git
+git clone https://github.com/willtanoe/freya.git
 cd Freya
 uv sync --extra dev
 ```

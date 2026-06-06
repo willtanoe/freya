@@ -39,7 +39,7 @@ calendar, your inbox, your code. Specific verbs and proper nouns.>
 
 → **[Tutorial: <name>](../tutorials/<file>.md)** is the closest match.
 
-→ **[Recipe: <name>](https://github.com/freya-ai/Freya/tree/main/src/freya/recipes/data)** if you want the exact config.
+→ **[Recipe: <name>](https://github.com/willtanoe/freya/tree/main/src/freya/recipes/data)** if you want the exact config.
 
 → **[<one more related doc>](../<path>.md)** if the reader is going deeper.
 ```

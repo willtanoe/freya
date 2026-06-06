@@ -1,9 +1,9 @@
 site_name: Freya
-site_url: https://freya-ai.github.io/Freya/
+site_url: https://willtanoe.github.io/freya/
 site_description: Personal AI, On Personal Devices
 site_author: Freya Contributors
-repo_url: https://github.com/freya-ai/Freya
-repo_name: freya-ai/Freya
+repo_url: https://github.com/willtanoe/freya
+repo_name: willtanoe/freya
 edit_uri: edit/main/docs/
 
 copyright: Copyright &copy; 2026 Freya Contributors
@@ -140,7 +140,7 @@ extra:
     index_name: ""   # e.g. "freya"
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/freya-ai/Freya
+      link: https://github.com/willtanoe/freya
 
 nav:
   - Home: index.md

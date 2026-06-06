@@ -5,7 +5,7 @@
 
   <p>
     <a href="https://scalingintelligence.stanford.edu/blogs/freya/"><img src="https://img.shields.io/badge/project-Freya-blue" alt="Project"></a>
-    <a href="https://freya-ai.github.io/Freya/"><img src="https://img.shields.io/badge/docs-mkdocs-blue" alt="Docs"></a>
+    <a href="https://willtanoe.github.io/freya/"><img src="https://img.shields.io/badge/docs-mkdocs-blue" alt="Docs"></a>
     <img src="https://img.shields.io/badge/python-%3E%3D3.10-blue" alt="Python">
     <img src="https://img.shields.io/badge/license-Apache%202.0-green" alt="License">
     <a href="https://discord.gg/6ZtCB94h5p"><img src="https://img.shields.io/badge/discord-join-7289da?logo=discord&logoColor=white" alt="Discord"></a>
@@ -17,13 +17,13 @@
 
 ---
 
-> **[Documentation](https://freya-ai.github.io/Freya/)**
+> **[Documentation](https://willtanoe.github.io/freya/)**
 >
 > **[Project Site](https://scalingintelligence.stanford.edu/blogs/freya/)**
 >
-> **[Leaderboard](https://freya-ai.github.io/Freya/leaderboard/)**
+> **[Leaderboard](https://willtanoe.github.io/freya/leaderboard/)**
 >
-> **[Roadmap](https://freya-ai.github.io/Freya/development/roadmap/)**
+> **[Roadmap](https://willtanoe.github.io/freya/development/roadmap/)**
 
 ## Why Freya?
 
@@ -37,13 +37,13 @@ Pick your platform and run one command. Each installer handles [uv](https://docs
 
 | Platform | One-liner |
 |---|---|
-| **macOS · Linux · WSL2** | `curl -fsSL https://freya-ai.github.io/Freya/install.sh \| bash` |
-| **Native Windows** | `irm https://freya-ai.github.io/Freya/install.ps1 \| iex` |
-| **Desktop GUI** | Download `.exe` / `.dmg` / `.deb` / `.rpm` / `.AppImage` from the [latest release](https://github.com/freya-ai/Freya/releases) |
+| **macOS · Linux · WSL2** | `curl -fsSL https://willtanoe.github.io/freya/install.sh \| bash` |
+| **Native Windows** | `irm https://willtanoe.github.io/freya/install.ps1 \| iex` |
+| **Desktop GUI** | Download `.exe` / `.dmg` / `.deb` / `.rpm` / `.AppImage` from the [latest release](https://github.com/willtanoe/freya/releases) |
 
 Then `freya` to start. The Rust extension and larger models continue downloading in the background; `freya doctor` shows status.
 
-Platform-specific notes (WSL2 setup, native-Windows scheduled-task service, desktop prerequisites, manual / contributor install): see the [installation docs](https://freya-ai.github.io/Freya/getting-started/install/).
+Platform-specific notes (WSL2 setup, native-Windows scheduled-task service, desktop prerequisites, manual / contributor install): see the [installation docs](https://willtanoe.github.io/freya/getting-started/install/).
 
 ## Quick Start
 
@@ -70,7 +70,7 @@ freya connect gdrive          # one OAuth covers Gmail / Calendar / Tasks
 freya digest --fresh          # generate and play your first briefing
 ```
 
-Per-preset deep dives: [morning digest](https://freya-ai.github.io/Freya/user-guide/morning-digest/) · [deep research](https://freya-ai.github.io/Freya/user-guide/deep-research/) · [code assistant](https://freya-ai.github.io/Freya/user-guide/code-assistant/) · [scheduled monitor](https://freya-ai.github.io/Freya/user-guide/scheduled-monitor/) · [chat simple](https://freya-ai.github.io/Freya/user-guide/chat-simple/) · or the full [quickstart guide](https://freya-ai.github.io/Freya/getting-started/quickstart/).
+Per-preset deep dives: [morning digest](https://willtanoe.github.io/freya/user-guide/morning-digest/) · [deep research](https://willtanoe.github.io/freya/user-guide/deep-research/) · [code assistant](https://willtanoe.github.io/freya/user-guide/code-assistant/) · [scheduled monitor](https://willtanoe.github.io/freya/user-guide/scheduled-monitor/) · [chat simple](https://willtanoe.github.io/freya/user-guide/chat-simple/) · or the full [quickstart guide](https://willtanoe.github.io/freya/getting-started/quickstart/).
 
 ### Skills
 
@@ -93,7 +93,7 @@ freya bench skills --max-samples 5 --seeds 42
 
 Import from [Hermes Agent](https://github.com/NousResearch/hermes-agent) (~150 skills), [OpenClaw](https://github.com/openclaw/skills) (~13,700 community skills), or any GitHub repo. Skills follow the [agentskills.io](https://agentskills.io/specification) open standard.
 
-See the [Skills User Guide](https://freya-ai.github.io/Freya/user-guide/skills/) and [Skills Tutorial](https://freya-ai.github.io/Freya/tutorials/skills-workflow/) for details.
+See the [Skills User Guide](https://willtanoe.github.io/freya/user-guide/skills/) and [Skills Tutorial](https://willtanoe.github.io/freya/tutorials/skills-workflow/) for details.
 
 ### Built-in Agents
 
@@ -110,16 +110,16 @@ Freya ships with eight built-in agents across three execution modes (on-demand, 
 | `native_openhands` | On-demand | CodeAct — generates and executes Python code |
 | `simple` | On-demand | Single-turn chat, no tools |
 
-See the [User Guide](https://freya-ai.github.io/Freya/user-guide/morning-digest/) and [Tutorials](https://freya-ai.github.io/Freya/tutorials/) for detailed setup instructions.
+See the [User Guide](https://willtanoe.github.io/freya/user-guide/morning-digest/) and [Tutorials](https://willtanoe.github.io/freya/tutorials/) for detailed setup instructions.
 
-Full documentation — including Docker deployment, cloud engines, development setup, and tutorials — at **[freya-ai.github.io/Freya](https://freya-ai.github.io/Freya/)**.
+Full documentation — including Docker deployment, cloud engines, development setup, and tutorials — at **[freya-ai.github.io/Freya](https://willtanoe.github.io/freya/)**.
 
 ## Community
 
-- **GitHub:** [github.com/freya-ai/Freya](https://github.com/freya-ai/Freya)
+- **GitHub:** [github.com/freya-ai/Freya](https://github.com/willtanoe/freya)
 - **Discord:** [discord.gg/YZZRxCAhmm](https://discord.gg/YZZRxCAhmm)
 - **X / Twitter:** [@FreyaAI](https://x.com/FreyaAI)
-- **Docs:** [freya-ai.github.io/Freya](https://freya-ai.github.io/Freya/)
+- **Docs:** [freya-ai.github.io/Freya](https://willtanoe.github.io/freya/)
 
 ## Contributing
 
@@ -128,14 +128,14 @@ We welcome contributions! See the [Contributing Guide](CONTRIBUTING.md) for ince
 Quick start for contributors:
 
 ```bash
-git clone https://github.com/freya-ai/Freya.git
+git clone https://github.com/willtanoe/freya.git
 cd Freya
 uv sync --extra dev
 uv run pre-commit install
 uv run pytest tests/ -v
 ```
 
-Browse the [Roadmap](https://freya-ai.github.io/Freya/development/roadmap/) for areas where help is needed. Comment **"take"** on any issue to get auto-assigned.
+Browse the [Roadmap](https://willtanoe.github.io/freya/development/roadmap/) for areas where help is needed. Comment **"take"** on any issue to get auto-assigned.
 
 ## About
 

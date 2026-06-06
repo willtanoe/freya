@@ -298,7 +298,7 @@ We recommend creating **one Slack app** that handles both. The App Manifest belo
 
 8. **(Optional) Set the app icon:**
    - Go to Basic Information → Display Information
-   - Upload the [Freya icon](https://github.com/freya-ai/Freya/blob/main/assets/freya_logo.png)
+   - Upload the [Freya icon](https://github.com/willtanoe/freya/blob/main/assets/freya_logo.png)
 
 ### Required Bot Token Scopes (reference)
 

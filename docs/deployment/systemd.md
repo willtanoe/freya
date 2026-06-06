@@ -15,7 +15,7 @@ Create the user and installation directory:
 ```bash
 sudo useradd --system --create-home --home-dir /opt/freya freya
 sudo -u freya python3 -m venv /opt/freya/.venv
-sudo -u freya git clone https://github.com/freya-ai/Freya.git /opt/freya/Freya
+sudo -u freya git clone https://github.com/willtanoe/freya.git /opt/freya/Freya
 cd /opt/freya/Freya && sudo -u freya uv sync --extra server
 ```
 

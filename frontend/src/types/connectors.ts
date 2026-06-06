@@ -136,7 +136,7 @@ export const SOURCE_CATALOG: ConnectorMeta[] = [
       },
       {
         label: '(Optional) Set the app icon: in the left sidebar click "Basic Information" → scroll to "Display Information" → upload the Freya logo',
-        url: 'https://github.com/freya-ai/Freya/blob/main/assets/freya_logo.png',
+        url: 'https://github.com/willtanoe/freya/blob/main/assets/freya_logo.png',
         urlLabel: 'Download icon',
       },
     ],

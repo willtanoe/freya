@@ -7,7 +7,7 @@ A personalized daily briefing that collects data from your connected services, s
 ### 1. Install and set up Freya
 
 ```bash
-git clone https://github.com/freya-ai/Freya.git
+git clone https://github.com/willtanoe/freya.git
 cd Freya
 uv sync --extra dev
 ```

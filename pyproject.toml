@@ -146,10 +146,10 @@ docs = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/freya-ai/Freya"
-Documentation = "https://freya-ai.github.io/Freya/"
-Repository = "https://github.com/freya-ai/Freya"
-Issues = "https://github.com/freya-ai/Freya/issues"
+Homepage = "https://github.com/willtanoe/freya"
+Documentation = "https://willtanoe.github.io/freya/"
+Repository = "https://github.com/willtanoe/freya"
+Issues = "https://github.com/willtanoe/freya/issues"
 
 [project.scripts]
 freya = "freya.cli:main"

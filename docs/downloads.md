@@ -17,7 +17,7 @@ processing happens on your local machine — the app connects to the backend you
 !!! info "Backend required"
     Start the backend before opening the desktop app. The quickstart script handles everything:
     ```bash
-    git clone https://github.com/freya-ai/Freya.git && cd Freya
+    git clone https://github.com/willtanoe/freya.git && cd Freya
     ./scripts/quickstart.sh
     ```
 
@@ -25,14 +25,14 @@ processing happens on your local machine — the app connects to the backend you
 
 | Platform | Download | Notes |
 |----------|----------|-------|
-| macOS (Universal) | [:material-download: **Freya.dmg**](https://github.com/freya-ai/Freya/releases/download/desktop-v1.0.2/Freya_1.0.1_universal.dmg) | Apple Silicon + Intel |
-| Windows (64-bit) | [:material-download: **Freya-setup.exe**](https://github.com/freya-ai/Freya/releases/download/desktop-v1.0.2/Freya_1.0.1_x64-setup.exe) | Windows 10+ |
-| Linux (DEB) | [:material-download: **Freya.deb**](https://github.com/freya-ai/Freya/releases/download/desktop-v1.0.2/Freya_1.0.1_amd64.deb) | Ubuntu, Debian |
-| Linux (RPM) | [:material-download: **Freya.rpm**](https://github.com/freya-ai/Freya/releases/download/desktop-v1.0.2/Freya-1.0.1-1.x86_64.rpm) | Fedora, RHEL |
-| Linux (AppImage) | [:material-download: **Freya.AppImage**](https://github.com/freya-ai/Freya/releases/download/desktop-v1.0.2/Freya_1.0.1_amd64.AppImage) | Any distro |
+| macOS (Universal) | [:material-download: **Freya.dmg**](https://github.com/willtanoe/freya/releases/download/desktop-v1.0.2/Freya_1.0.1_universal.dmg) | Apple Silicon + Intel |
+| Windows (64-bit) | [:material-download: **Freya-setup.exe**](https://github.com/willtanoe/freya/releases/download/desktop-v1.0.2/Freya_1.0.1_x64-setup.exe) | Windows 10+ |
+| Linux (DEB) | [:material-download: **Freya.deb**](https://github.com/willtanoe/freya/releases/download/desktop-v1.0.2/Freya_1.0.1_amd64.deb) | Ubuntu, Debian |
+| Linux (RPM) | [:material-download: **Freya.rpm**](https://github.com/willtanoe/freya/releases/download/desktop-v1.0.2/Freya-1.0.1-1.x86_64.rpm) | Fedora, RHEL |
+| Linux (AppImage) | [:material-download: **Freya.AppImage**](https://github.com/willtanoe/freya/releases/download/desktop-v1.0.2/Freya_1.0.1_amd64.AppImage) | Any distro |
 
 !!! tip "All releases"
-    Browse all versions on the [GitHub Releases](https://github.com/freya-ai/Freya/releases) page.
+    Browse all versions on the [GitHub Releases](https://github.com/willtanoe/freya/releases) page.
 
 ### macOS: "app is damaged" fix
 
@@ -69,7 +69,7 @@ The backend (Ollama, Python API server, inference) runs separately on your machi
 ### Build from source
 
 ```bash
-git clone https://github.com/freya-ai/Freya.git
+git clone https://github.com/willtanoe/freya.git
 cd Freya/desktop
 npm install
 npm run tauri build
@@ -87,7 +87,7 @@ your machine and the frontend connects via `localhost`.
 ### One-command setup
 
 ```bash
-git clone https://github.com/freya-ai/Freya.git
+git clone https://github.com/willtanoe/freya.git
 cd Freya
 ./scripts/quickstart.sh
 ```
@@ -107,7 +107,7 @@ If you prefer to run each step yourself:
 === "Step 1: Clone and install"
 
     ```bash
-    git clone https://github.com/freya-ai/Freya.git
+    git clone https://github.com/willtanoe/freya.git
     cd Freya
     uv sync --extra server
     cd frontend && npm install && cd ..
@@ -154,7 +154,7 @@ programmatically. Every feature is accessible from the terminal.
 ### Install
 
 ```bash
-git clone https://github.com/freya-ai/Freya.git
+git clone https://github.com/willtanoe/freya.git
 cd Freya
 uv sync
 ```
@@ -202,7 +202,7 @@ For programmatic access, the `Freya` class provides a high-level sync API.
 ### Install
 
 ```bash
-git clone https://github.com/freya-ai/Freya.git
+git clone https://github.com/willtanoe/freya.git
 cd Freya
 uv sync
 ```

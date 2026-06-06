@@ -4,18 +4,18 @@
 
 | Platform | One-liner | Detailed guide |
 |---|---|---|
-| **macOS** | `curl -fsSL https://freya-ai.github.io/Freya/install.sh \| bash` | [macOS install](macos.md) |
-| **Linux** | `curl -fsSL https://freya-ai.github.io/Freya/install.sh \| bash` | [Linux install](linux.md) |
-| **WSL2 on Windows** | `curl -fsSL https://freya-ai.github.io/Freya/install.sh \| bash` (run inside Ubuntu) | [WSL2 install](wsl2.md) |
-| **Native Windows** | `irm https://freya-ai.github.io/Freya/install.ps1 \| iex` | [Native Windows install](windows-native.md) |
-| **Desktop GUI** | Download from the [latest release](https://github.com/freya-ai/Freya/releases) | — |
+| **macOS** | `curl -fsSL https://willtanoe.github.io/freya/install.sh \| bash` | [macOS install](macos.md) |
+| **Linux** | `curl -fsSL https://willtanoe.github.io/freya/install.sh \| bash` | [Linux install](linux.md) |
+| **WSL2 on Windows** | `curl -fsSL https://willtanoe.github.io/freya/install.sh \| bash` (run inside Ubuntu) | [WSL2 install](wsl2.md) |
+| **Native Windows** | `irm https://willtanoe.github.io/freya/install.ps1 \| iex` | [Native Windows install](windows-native.md) |
+| **Desktop GUI** | Download from the [latest release](https://github.com/willtanoe/freya/releases) | — |
 
 The bash and PowerShell installers do the same thing on their respective hosts. The rest of this page documents the bash installer in detail; the [native Windows guide](windows-native.md) is the equivalent reference for PowerShell.
 
 ## Bash installer
 
 ```bash
-curl -fsSL https://freya-ai.github.io/Freya/install.sh | bash
+curl -fsSL https://willtanoe.github.io/freya/install.sh | bash
 ```
 
 The installer downloads everything for you — including [uv](https://docs.astral.sh/uv/)
@@ -26,7 +26,7 @@ model. **You don't need to install uv or any other prerequisite first.**
     This script is served straight from the project's own GitHub Pages site,
     so HTTPS always works. You may also see `https://freya.ai/install.sh`
     referenced in older docs — that domain is community-operated and has had
-    intermittent TLS issues ([#337](https://github.com/freya-ai/Freya/issues/337)).
+    intermittent TLS issues ([#337](https://github.com/willtanoe/freya/issues/337)).
     The `freya-ai.github.io` URL above is the canonical one.
 
 About 3 minutes on a typical broadband connection. Type `freya` to start chatting.
@@ -84,7 +84,7 @@ Local-first remains the default when no key is in env. Precedence is OpenRouter 
 | Variable | Default | Purpose |
 |---|---|---|
 | `FREYA_HOME` | `$HOME/.freya` | Install location. |
-| `FREYA_REPO_URL` | `https://github.com/freya-ai/Freya.git` | Source repo for the clone step. |
+| `FREYA_REPO_URL` | `https://github.com/willtanoe/freya.git` | Source repo for the clone step. |
 
 ## Uninstall
 

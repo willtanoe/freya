@@ -12,7 +12,7 @@ The Freya Python SDK provides a high-level interface for interacting with local 
 ## Installation
 
 ```bash
-git clone https://github.com/freya-ai/Freya.git
+git clone https://github.com/willtanoe/freya.git
 cd Freya
 uv sync
 ```

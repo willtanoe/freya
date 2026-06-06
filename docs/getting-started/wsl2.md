@@ -18,7 +18,7 @@ Then open the Ubuntu (or Debian) shell that gets installed.
 ## Install Freya
 
 ```bash
-curl -fsSL https://freya-ai.github.io/Freya/install.sh | bash
+curl -fsSL https://willtanoe.github.io/freya/install.sh | bash
 ```
 
 About 3 minutes. Type `freya` to start.

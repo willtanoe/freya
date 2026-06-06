@@ -43,7 +43,7 @@ Freya is that stack. It is a framework for local-first personal AI, built around
     Run the full chat UI locally with one script:
 
     ```bash
-    git clone https://github.com/freya-ai/Freya.git
+    git clone https://github.com/willtanoe/freya.git
     cd Freya
     ./scripts/quickstart.sh
     ```
@@ -59,16 +59,16 @@ Freya is that stack. It is a framework for local-first personal AI, built around
     **Step 1.** Start the backend:
 
     ```bash
-    git clone https://github.com/freya-ai/Freya.git
+    git clone https://github.com/willtanoe/freya.git
     cd Freya
     ./scripts/quickstart.sh
     ```
 
     **Step 2.** Download and open the desktop app:
 
-    [Download for macOS](https://github.com/freya-ai/Freya/releases/download/desktop-v1.0.2/Freya_1.0.1_universal.dmg){ .md-button .md-button--primary }
+    [Download for macOS](https://github.com/willtanoe/freya/releases/download/desktop-v1.0.2/Freya_1.0.1_universal.dmg){ .md-button .md-button--primary }
 
-    Also available for [Windows](https://github.com/freya-ai/Freya/releases/download/desktop-v1.0.2/Freya_1.0.1_x64-setup.exe), [Linux (DEB)](https://github.com/freya-ai/Freya/releases/download/desktop-v1.0.2/Freya_1.0.1_amd64.deb), and [Linux (RPM)](https://github.com/freya-ai/Freya/releases/download/desktop-v1.0.2/Freya-1.0.1-1.x86_64.rpm). See the [Downloads](downloads.md) page for details.
+    Also available for [Windows](https://github.com/willtanoe/freya/releases/download/desktop-v1.0.2/Freya_1.0.1_x64-setup.exe), [Linux (DEB)](https://github.com/willtanoe/freya/releases/download/desktop-v1.0.2/Freya_1.0.1_amd64.deb), and [Linux (RPM)](https://github.com/willtanoe/freya/releases/download/desktop-v1.0.2/Freya-1.0.1-1.x86_64.rpm). See the [Downloads](downloads.md) page for details.
 
     The app connects to `http://localhost:8000` automatically.
 
