@@ -322,16 +322,6 @@ export function SettingsPage() {
           </Section>
 
           {/* Cloud Providers */}
-          <Section title="Cloud Providers">
-            <SettingRow label="Mode" description="Freya is cloud-first. Configure provider API keys via ⌘K → Providers.">
-              <span className="text-sm px-3 py-1.5 rounded-lg" style={{ background: 'var(--color-accent-subtle)', color: 'var(--color-accent)' }}>
-                Cloud Mode
-              </span>
-            </SettingRow>
-            </SettingRow>
-          </Section>
-
-          {/* Cloud Providers */}
           <Section title="Cloud Providers" description="Manage cloud API keys. Use ⌘K → Providers for full management.">
             <SettingRow label="Configured" description="Green dot means API key is configured">
               <div className="flex flex-wrap gap-3">
