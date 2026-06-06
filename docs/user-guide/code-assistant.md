@@ -18,8 +18,8 @@ This writes a pre-configured `~/.freya/config.toml` for the code assistant.
 ### 2. Start a local LLM via Ollama
 
 ```bash
-# Install Ollama: https://ollama.com
-ollama pull qwen3.5:9b
+# install the Freya server: https://ollama.com
+ollama pull gpt-4o
 ```
 
 ### 3. Ask a coding question
@@ -61,7 +61,7 @@ The preset writes this to `~/.freya/config.toml`:
 default = "ollama"
 
 [intelligence]
-default_model = "qwen3.5:9b"
+default_model = "gpt-4o"
 # default_model = "qwen3.5:35b"    # Better for complex code tasks
 
 [agent]
@@ -76,7 +76,7 @@ enabled = ["code_interpreter", "file_read", "file_write", "shell_exec", "web_sea
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `intelligence.default_model` | `qwen3.5:9b` | The model for code generation. Use `qwen3.5:35b` for complex tasks like refactoring or multi-file changes. |
+| `intelligence.default_model` | `gpt-4o` | The model for code generation. Use `qwen3.5:35b` for complex tasks like refactoring or multi-file changes. |
 | `agent.default_agent` | `orchestrator` | Multi-turn agent that picks tools iteratively until it has an answer. |
 | `agent.max_turns` | `10` | Maximum tool-calling iterations. Increase for multi-step tasks. |
 | `tools.enabled` | 7 tools | `code_interpreter` (execute Python), `file_read`, `file_write`, `shell_exec` (run shell commands), `web_search`, `think`, `calculator`. |

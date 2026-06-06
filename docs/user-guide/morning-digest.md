@@ -15,8 +15,8 @@ uv sync --extra dev
 ### 2. Start a local LLM via Ollama
 
 ```bash
-# Install Ollama: https://ollama.com
-ollama pull qwen3.5:9b    # or any model you prefer
+# install the Freya server: https://ollama.com
+ollama pull gpt-4o    # or any model you prefer
 ```
 
 ### 3. Configure the digest
@@ -28,7 +28,7 @@ Edit `~/.freya/config.toml`:
 default = "ollama"
 
 [intelligence]
-default_model = "qwen3.5:9b"
+default_model = "gpt-4o"
 
 [digest]
 enabled = true

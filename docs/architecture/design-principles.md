@@ -87,9 +87,9 @@ Freya is designed to work **entirely without network access**. All core function
 
 | Feature | Offline Behavior |
 |---------|-----------------|
-| Inference | Ollama, vLLM, SGLang, llama.cpp all run locally |
+| Inference | Ollama, vLLM, SGLang, llama.cpp all run via cloud API |
 | Memory | SQLite/FTS5 uses built-in Python `sqlite3` module |
-| Embeddings | `sentence-transformers` models run locally |
+| Embeddings | `sentence-transformers` models run via cloud API |
 | Telemetry | SQLite-based, fully local |
 | Traces | SQLite-based, fully local |
 | Tools | Calculator, Think, FileRead all local |
@@ -105,7 +105,7 @@ Cloud engines (OpenAI, Anthropic, Google) are available through the optional `cl
 # This works without any network connection
 from freya import Freya
 
-j = Freya(engine_key="ollama")  # Local Ollama server
+j = Freya(engine_key="ollama")  # Local freya server
 response = j.ask("Hello")
 ```
 
@@ -296,4 +296,4 @@ Optional features that require additional packages:
 | PDF ingestion | `freya[memory-pdf]` | `pdfplumber` |
 | WhatsApp Baileys | `freya[channel-whatsapp-baileys]` | Node.js 22+ |
 
-This design ensures that a minimal installation (`uv sync`) gives you a fully functional system with SQLite memory, local inference, and the complete CLI -- no Docker, no external databases, no cloud accounts required.
+This design ensures that a minimal installation (`uv sync`) gives you a fully functional system with SQLite memory, cloud inference, and the complete CLI -- no Docker, no external databases, no cloud accounts required.

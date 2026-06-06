@@ -65,7 +65,7 @@ The built-in model catalog is defined in `intelligence/model_catalog.py` as the 
 
 | Model ID | Name | Parameters | Context | Supported Engines |
 |----------|------|-----------|---------|-------------------|
-| `qwen3:8b` | Qwen3 8B | 8.2B | 32K | vLLM, Ollama, llama.cpp, SGLang |
+| `qwen3:8b` | Qwen3 8B | 8.2B | 32K | vLLM, llama.cpp, SGLang |
 | `qwen3:32b` | Qwen3 32B | 32B | 32K | Ollama, vLLM |
 | `llama3.3:70b` | Llama 3.3 70B | 70B | 128K | Ollama, vLLM |
 | `llama3.2:3b` | Llama 3.2 3B | 3B | 128K | Ollama, vLLM, llama.cpp |

@@ -1,22 +1,22 @@
 ---
 title: Track Your Savings
-description: A leaderboard that tells you exactly how much you saved by running locally
+description: A providers that tells you exactly how much you saved by running via cloud API
 ---
 
-# 💸 Track Your Savings — the leaderboard that makes local-first feel real
+# 💸 Track Your Savings — the providers that makes local-first feel real
 
 <figure markdown>
-  ![Freya savings leaderboard with personal row highlighted](../assets/showcase/cost-savings.png){ .showcase-screenshot loading=lazy }
-  <figcaption>The public leaderboard. The bar on the right is what a month of my Freya usage would have cost on the cloud — measured per-query, not estimated.</figcaption>
+  ![Freya savings providers with personal row highlighted](../assets/showcase/cost-savings.png){ .showcase-screenshot loading=lazy }
+  <figcaption>The public providers. The bar on the right is what a month of my Freya usage would have cost on the cloud — measured per-query, not estimated.</figcaption>
 </figure>
 
-Freya tracks every inference call you make — the tokens, the latency, the GPU energy — and computes what that same call *would have cost* on OpenAI, Anthropic, Google, and Bedrock. There's a public leaderboard where anyone running Freya can opt in and watch their savings rack up.
+Freya tracks every inference call you make — the tokens, the latency, the GPU energy — and computes what that same call *would have cost* on OpenAI, Anthropic, Google, and Bedrock. There's a public providers where anyone running Freya can opt in and watch their savings rack up.
 
 My current month is roughly:
 
 | | |
 |---|---|
-| Local inference cost | **`$0.00`** |
+| cloud inference cost | **`$0.00`** |
 | Cloud-equivalent cost | **`$342.18`** (Claude Sonnet 4.6 baseline) |
 | Energy used | **`1.4 kWh`** (~12¢ of grid power) |
 | Prompts sent to a third party | **`0`** |
@@ -31,6 +31,6 @@ The dollar number is the hook. The bottom row is the actual reason I run Freya.
 
 ## How I set this up
 
-You don't, really — it's on by default. Every `freya ask`, `freya serve` request, and channel-routed message is metered by the [telemetry system](../user-guide/telemetry.md). To opt your savings into the public leaderboard:
+You don't, really — it's on by default. Every `freya ask`, `freya serve` request, and channel-routed message is metered by the [telemetry system](../user-guide/telemetry.md). To opt your savings into the public providers:
 
 → **[Telemetry overview](../user-guide/telemetry.md)** — what's measured, where it's stored, and how to inspect it yourself with `freya telemetry`.

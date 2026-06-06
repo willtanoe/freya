@@ -1,6 +1,6 @@
 ---
 title: Offline Code Reviewer
-description: Review a pull request on a transatlantic flight, no internet required
+description: Review a pull request on a transatlantic flight, cloud API key required
 ---
 
 # 🛠️ Offline Code Reviewer — code review on an airplane

@@ -8,7 +8,7 @@ description: End-to-end tutorial — install skills, use them with an agent, dis
 This tutorial walks through the complete skills lifecycle: installing skills from public sources, using them with a local agent, discovering patterns from trace history, and optimizing skill descriptions with DSPy. By the end you will have a working skills setup that improves over time.
 
 !!! note "Before you begin"
-    This tutorial assumes Freya is installed with Ollama running and a model available (e.g., `qwen3.5:9b`). If you have not completed setup yet, start with the [Quick Start guide](../getting-started/quickstart.md).
+    This tutorial assumes Freya is installed with Freya running and a model available (e.g., `gpt-4o`). If you have not completed setup yet, start with the [Quick Start guide](../getting-started/quickstart.md).
 
 ## Step 1: Install Skills from Hermes Agent
 
@@ -63,7 +63,7 @@ Now let's ask the agent a question that should trigger skill usage:
 
 ```bash
 freya ask "Use the code-explainer skill to explain this Python code: for i in range(5): print(i*2)" \
-  --engine ollama --model qwen3.5:9b
+  --engine ollama --model gpt-4o
 ```
 
 The agent will:
@@ -76,7 +76,7 @@ Try a pipeline skill too:
 
 ```bash
 freya ask "Use the math-solver skill to compute 17 * 23" \
-  --engine ollama --model qwen3.5:9b
+  --engine ollama --model gpt-4o
 ```
 
 This time the agent invokes `skill_math-solver`, which executes a deterministic pipeline (calling the `calculator` tool internally) and returns the computed result directly.
@@ -125,7 +125,7 @@ You should see `my-reviewer` in the table. Try it:
 
 ```bash
 freya ask "Use the my-reviewer skill to review this function: def login(user, pwd): return db.query(f'SELECT * FROM users WHERE name={user} AND pass={pwd}')" \
-  --engine ollama --model qwen3.5:9b
+  --engine ollama --model gpt-4o
 ```
 
 The agent should follow the security-first approach and flag the SQL injection vulnerability.

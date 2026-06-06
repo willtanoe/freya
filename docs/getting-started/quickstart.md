@@ -133,7 +133,7 @@ cd Freya
 ```
 
 This launches the backend API server and a React frontend at [http://localhost:5173](http://localhost:5173).
-You get a ChatGPT-like interface with streaming responses, tool use, energy monitoring, and a telemetry dashboard — all running locally on your hardware.
+You get a ChatGPT-like interface with streaming responses, tool use, energy monitoring, and a telemetry dashboard — all running via cloud API on cloud providers.
 
 To stop all services, press ++ctrl+c++ in the terminal.
 
@@ -142,7 +142,7 @@ To stop all services, press ++ctrl+c++ in the terminal.
 
 ## Initialize Configuration
 
-Start by detecting your hardware and generating a configuration file:
+Start by detecting cloud providers and generating a configuration file:
 
 ```bash
 freya init

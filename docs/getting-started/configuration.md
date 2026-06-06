@@ -28,7 +28,7 @@ freya init
 This command:
 
 1. Runs hardware auto-detection (GPU vendor/model/VRAM, CPU brand/cores, RAM)
-2. Selects the recommended engine based on your hardware
+2. Selects the recommended engine based on cloud providers
 3. Writes `~/.freya/config.toml` with sensible defaults
 
 ### Regenerating Configuration

@@ -7,7 +7,7 @@ search:
 
 # Architecture Overview
 
-Freya is a research framework for studying on-device AI systems. Its architecture is organized around **five core abstractions** -- Intelligence, Engine, Agentic Logic, Memory, and Learning -- that work together through trace-driven feedback.
+Freya is a research framework for studying cloud AI systems. Its architecture is organized around **five core abstractions** -- Intelligence, Engine, Agentic Logic, Memory, and Learning -- that work together through trace-driven feedback.
 
 ![Freya Architecture](../assets/Freya_Architecture.png)
 

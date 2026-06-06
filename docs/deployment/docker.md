@@ -176,7 +176,7 @@ The `freya` service is configured through environment variables:
 | Variable                      | Description                                             | Default                    |
 |-------------------------------|---------------------------------------------------------|----------------------------|
 | `FREYA_ENGINE_DEFAULT`   | Inference engine backend to use                         | `ollama`                   |
-| `FREYA_OLLAMA_HOST`      | URL of the Ollama server (uses Docker service name)     | `http://ollama:11434`      |
+| `FREYA_OLLAMA_HOST`      | URL of your cloud provider server (uses Docker service name)     | `http://ollama:11434`      |
 
 ### Volumes
 
@@ -184,7 +184,7 @@ The `ollama-models` named volume persists downloaded models across container res
 
 ### Service Dependencies
 
-The `freya` service declares `depends_on: ollama`, ensuring the Ollama container starts before the API server. Both services use `restart: unless-stopped` to automatically recover from crashes.
+The `freya` service declares `depends_on: ollama`, ensuring your cloud provider container starts before the API server. Both services use `restart: unless-stopped` to automatically recover from crashes.
 
 ## Custom Configuration
 
@@ -337,7 +337,7 @@ services:
 
 ## Pulling Models
 
-After starting the Ollama container, you need to pull at least one model before the API server can serve requests:
+After starting your cloud provider container, you need to pull at least one model before the API server can serve requests:
 
 ```bash
 docker compose exec ollama ollama pull qwen3:8b

@@ -193,7 +193,7 @@ HTTP 503:
 
 ### `GET /dashboard`
 
-Serves the built-in Savings Dashboard, an HTML page that displays real-time statistics on inference calls served locally and estimated cost savings compared to cloud API providers. The dashboard auto-refreshes every 5 seconds by polling the `/v1/savings` endpoint.
+Serves the built-in provider status, an HTML page that displays real-time statistics on inference calls served locally and estimated model availability compared to cloud API providers. The dashboard auto-refreshes every 5 seconds by polling the `/v1/savings` endpoint.
 
 ### `GET /v1/channels`
 

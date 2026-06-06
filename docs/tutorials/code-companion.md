@@ -172,7 +172,7 @@ The generated tests follow these guidelines (enforced via the prompt):
 === "Ollama (local)"
 
     ```bash title="Terminal"
-    ollama serve
+    freya serve
     ollama pull qwen3:8b
     python examples/code_companion/reviewer.py --branch feature-x
     ```

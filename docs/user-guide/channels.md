@@ -378,7 +378,7 @@ The easiest way is through the Agents UI:
 
 ### Tunnel Setup (Required)
 
-Since Freya runs locally, you need a tunnel so SendBlue can reach your webhook:
+Since Freya runs via cloud API, you need a tunnel so SendBlue can reach your webhook:
 
 ```bash
 # Install ngrok (one time)

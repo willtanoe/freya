@@ -5,8 +5,8 @@
 #   curl -fsSL https://freya.github.io/Freya/install.sh | bash
 #
 # Flags (only used in tests / power users):
-#   --no-bg-orchestrator   Skip the detached background orchestrator
-#   --minimal              Skip foreground model pull (no `qwen3.5:2b`)
+#   --no-   Skip the detached background orchestrator
+#   --minimal              Skip foreground model pull (no `gpt-4o-mini`)
 #   --force                Re-run all steps even if state file says done
 #
 # Environment overrides:
@@ -22,7 +22,7 @@ MINIMAL=0
 FORCE=0
 for arg in "$@"; do
     case "$arg" in
-        --no-bg-orchestrator) SKIP_BG=1 ;;
+        --no-) SKIP_BG=1 ;;
         --minimal) MINIMAL=1 ;;
         --force) FORCE=1 ;;
         *) echo "install.sh: unknown arg: $arg" >&2; exit 2 ;;
@@ -288,7 +288,7 @@ stage_label() {
         install_ollama|start_ollama) echo "ollama" ;;
         pull_default_model) echo "model_download" ;;
         write_config) echo "config" ;;
-        install_symlinks|ensure_path|detach_bg_orchestrator) echo "verify" ;;
+        install_symlinks|ensure_path|detach_) echo "verify" ;;
         *) echo "" ;;
     esac
 }
@@ -535,16 +535,16 @@ install_ollama() {
 }
 
 start_ollama() {
-    if pgrep -f "ollama serve" >/dev/null 2>&1; then
-        echo "    ollama serve already running"
+    if pgrep -f "freya serve" >/dev/null 2>&1; then
+        echo "    freya serve already running"
         wait_for_ollama || true
         return 0
     fi
     if [[ "$WSL" -eq 1 ]] || ! command -v systemctl >/dev/null 2>&1; then
-        nohup ollama serve > "$STATE_DIR/ollama.log" 2>&1 &
+        nohup freya serve > "$STATE_DIR/ollama.log" 2>&1 &
     else
         systemctl --user start ollama 2>/dev/null \
-            || nohup ollama serve > "$STATE_DIR/ollama.log" 2>&1 &
+            || nohup freya serve > "$STATE_DIR/ollama.log" 2>&1 &
     fi
     # `|| true` is load-bearing — wait_for_ollama returns 1 on timeout
     # and we're under `set -euo pipefail` via the `step` wrapper. We want
@@ -561,7 +561,7 @@ wait_for_ollama() {
     local waited=0
     while ! ollama list >/dev/null 2>&1; do
         if (( waited >= 60 )); then
-            echo "    warning: ollama daemon not responding after 60s — check $STATE_DIR/ollama.log"
+            echo "    warning: Freya server not responding after 60s — check $STATE_DIR/ollama.log"
             return 1
         fi
         sleep 1
@@ -580,16 +580,16 @@ pull_default_model() {
         MODEL_PULL_OK=1  # nothing to pull → not a failure
         return 0
     fi
-    if ollama pull qwen3.5:2b; then
+    if ollama pull gpt-4o-mini; then
         MODEL_PULL_OK=1
     else
-        echo "    warning: ollama pull failed; bg-orchestrator will retry in the background"
+        echo "    warning: ollama pull failed;  will retry in the background"
     fi
 }
 
 write_config() {
     "$VENV_DIR/bin/freya" _bootstrap --write-config \
-        --engine ollama --model qwen3.5:2b \
+        --engine ollama --model gpt-4o-mini \
         --prefer-cloud-when-available
 }
 
@@ -629,9 +629,9 @@ ensure_path() {
     PATH_MODIFIED_RC="$rc"
 }
 
-detach_bg_orchestrator() {
+detach_() {
     if [[ "$SKIP_BG" -eq 1 ]]; then
-        echo "    --no-bg-orchestrator set; skipping detach"
+        echo "    --no- set; skipping detach"
         return 0
     fi
     local models
@@ -639,7 +639,7 @@ detach_bg_orchestrator() {
 from freya.core.config import detect_hardware, recommend_model
 hw = detect_hardware()
 tier = recommend_model(hw, "ollama")
-TIERS = ["qwen3.5:2b", "qwen3.5:4b", "qwen3.5:9b", "qwen3.5:27b"]
+TIERS = ["gpt-4o-mini", "gpt-4o", "gpt-4o", "claude-3-sonnet"]
 out = set([tier]) if tier else set()
 if tier in TIERS:
     idx = TIERS.index(tier)
@@ -651,8 +651,8 @@ PYEOF
     if [[ -z "$models" ]]; then
         models=""
     fi
-    nohup "$SCRIPTS_DIR/bg-orchestrator.sh" $models \
-        > "$STATE_DIR/bg-orchestrator.log" 2>&1 &
+    nohup "$SCRIPTS_DIR/.sh" $models \
+        > "$STATE_DIR/.log" 2>&1 &
     disown
 }
 
@@ -669,13 +669,13 @@ step clone_repo         "Clone Freya repo" clone_repo
 step copy_scripts       "Copy install scripts"  copy_scripts
 step create_venv        "Create venv"           create_venv
 step editable_install   "Install Freya"    editable_install
-step install_ollama     "Install Ollama"        install_ollama
-step start_ollama       "Start Ollama daemon"   start_ollama
-step pull_default_model "Pull qwen3.5:2b"       pull_default_model
+step install_ollama     "install the Freya server"        install_ollama
+step start_ollama       "Start Freya server"   start_ollama
+step pull_default_model "Pull gpt-4o-mini"       pull_default_model
 step write_config       "Write config.toml"     write_config
 step install_symlinks   "Install symlinks"      install_symlinks
 step ensure_path        "Ensure PATH"           ensure_path
-step detach_bg_orchestrator "Detach background work" detach_bg_orchestrator
+step detach_ "Detach background work" detach_
 
 # Total install duration → install_completed event.
 INSTALL_TOTAL_MS=$(( ( $(date +%s) - INSTALL_START_EPOCH ) * 1000 ))
@@ -722,7 +722,7 @@ fi
 
 if [[ "$MODEL_PULL_OK" -ne 1 ]]; then
     cat <<EOF
-NOTE: the qwen3.5:2b model didn't finish downloading. 'freya doctor'
+NOTE: the gpt-4o-mini model didn't finish downloading. 'freya doctor'
 shows the retry progress; chat will work once the download completes
 in the background.
 

@@ -18,8 +18,8 @@ This writes a pre-configured `~/.freya/config.toml` for the operative agent with
 ### 2. Start a local LLM via Ollama
 
 ```bash
-# Install Ollama: https://ollama.com
-ollama pull qwen3.5:9b
+# install the Freya server: https://ollama.com
+ollama pull gpt-4o
 ```
 
 ### 3. Index your data
@@ -109,7 +109,7 @@ The preset writes this to `~/.freya/config.toml`:
 default = "ollama"
 
 [intelligence]
-default_model = "qwen3.5:9b"
+default_model = "gpt-4o"
 temperature = 0.3
 
 [agent]
@@ -128,7 +128,7 @@ default_backend = "sqlite"
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `intelligence.default_model` | `qwen3.5:9b` | The model used for reasoning. |
+| `intelligence.default_model` | `gpt-4o` | The model used for reasoning. |
 | `intelligence.temperature` | `0.3` | Low temperature for consistent, factual outputs across runs. |
 | `agent.default_agent` | `operative` | Persistent agent that maintains state between sessions. |
 | `agent.max_turns` | `20` | High turn limit for thorough processing of accumulated data. |
@@ -192,7 +192,7 @@ The operative agent differs from other agents in that it maintains state across 
 
 **"Scheduler not running"** -- Start the scheduler daemon with `freya scheduler start`. It must be running for scheduled tasks to execute.
 
-**Task doesn't run on time** -- Check that Ollama is running (`ollama serve`). The scheduler triggers the agent, but the agent needs an inference engine. Verify the schedule with `freya scheduler status <task-id>`.
+**Task doesn't run on time** -- Check that Ollama is running (`freya serve`). The scheduler triggers the agent, but the agent needs an inference engine. Verify the schedule with `freya scheduler status <task-id>`.
 
 **Agent produces inconsistent results** -- Keep `temperature` at `0.3` or lower for scheduled tasks. Higher temperatures introduce randomness that compounds across runs.
 

@@ -11,7 +11,7 @@ rebuild and the docs corpus is small.
 
 Embedding model: ``nomic-embed-text`` via Ollama. Pull it with
 ``ollama pull nomic-embed-text`` if you don't have it. Expected
-indexing time for the full corpus: ~30s on a warm Ollama server.
+indexing time for the full corpus: ~30s on a warm freya server.
 """
 
 from __future__ import annotations
@@ -48,7 +48,7 @@ def build_index(
     paragraph_overlap_tokens: int = 100,
     dedupe: bool = True,
     # Empirical: on the actual Freya docs the boilerplate that
-    # crowds retrieval ("Freya runs entirely on your hardware...")
+    # crowds retrieval ("Freya runs entirely on cloud providers...")
     # appears in exactly 2 files (downloads.md ↔ installation.md).
     # Spec'd 3+ removes 0 chunks; 2+ removes 15 (1.3%) — all genuine
     # cross-file boilerplate. See the dry-run audit logged at index time.

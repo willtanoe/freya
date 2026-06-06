@@ -13,7 +13,7 @@ Freya is a cloud-first AI assistant. Connect your API keys and start chatting â€
 
 ## Browser App
 
-Run the full chat UI in your browser. The backend runs locally and connects
+Run the full chat UI in your browser. The backend runs via cloud API and connects
 to cloud AI providers via your API keys.
 
 ### One-command setup
@@ -53,7 +53,7 @@ If you prefer to run each step yourself:
 
     ```bash
     # Install from https://ollama.com if not already installed
-    ollama serve &
+    freya serve &
     ollama pull qwen3:0.6b
     ```
 
@@ -164,7 +164,7 @@ freya chat
 ```
 
 !!! info "Inference backend required"
-    The CLI requires a running inference backend (e.g., Ollama). See
+    The CLI requires a running inference backend (e.g.). See
     [Setting up an inference backend](#setting-up-an-inference-backend) below.
 
 ---
@@ -289,7 +289,7 @@ uv sync --extra server --extra memory-faiss --extra inference-cloud
 
 ## Setting Up an Inference Backend
 
-Freya requires at least one inference backend. Choose the one that matches your hardware.
+Freya requires at least one inference backend. Choose the one that matches cloud providers.
 
 ### Ollama (Recommended)
 
@@ -299,7 +299,7 @@ The easiest way to get started. Handles model downloading and serving automatica
 2. Start the server and pull a model:
 
     ```bash
-    ollama serve
+    freya serve
     ollama pull qwen3:0.6b
     ```
 

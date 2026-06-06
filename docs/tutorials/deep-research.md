@@ -101,10 +101,10 @@ finally:
 
 === "Ollama (local)"
 
-    Start the Ollama daemon and pull the model before running the script:
+    Start the Freya server and pull the model before running the script:
 
     ```bash title="Terminal"
-    ollama serve
+    freya serve
     ollama pull qwen3:8b
     python examples/deep_research/research.py "your topic here"
     ```

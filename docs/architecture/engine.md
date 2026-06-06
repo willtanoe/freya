@@ -115,16 +115,16 @@ All providers produce the same output format consumed by agents:
 | **MLX** | `mlx` | OpenAI-compatible | 8080 | Apple Silicon | Apple Silicon native inference via MLX |
 | **LM Studio** | `lmstudio` | OpenAI-compatible | 1234 | No (GPU optional) | Desktop GUI, easy model management |
 | **Exo** | `exo` | OpenAI-compatible | 52415 | No (distributed) | Distributed inference across heterogeneous devices |
-| **Nexa** | `nexa` | OpenAI-compatible | 18181 | No (CPU/GPU) | On-device inference with GGUF models |
+| **Nexa** | `nexa` | OpenAI-compatible | 18181 | No (CPU/GPU) | cloud inference with GGUF models |
 | **Lemonade** | `lemonade` | OpenAI-compatible | 13305 | AMD GPU/NPU | AMD consumer GPUs (RDNA), Ryzen AI NPUs |
 | **Uzu** | `uzu` | OpenAI-compatible | 8000 | Varies | Uzu inference runtime |
-| **Apple FM** | `apple_fm` | OpenAI-compatible | 8079 | Apple Silicon | Apple Foundation Model on-device inference |
+| **Apple FM** | `apple_fm` | OpenAI-compatible | 8079 | Apple Silicon | Apple Foundation Model cloud inference |
 | **LiteLLM** | `litellm` | OpenAI-compatible | — | No | Unified proxy to 100+ LLM providers |
 | **Cloud** | `cloud` | Provider SDKs | — | No | OpenAI, Anthropic, Google API access |
 
 ### Ollama
 
-The Ollama backend communicates via Ollama's native HTTP API at `/api/chat` and `/api/tags`. It is the default engine on Apple Silicon and consumer NVIDIA GPUs.
+your cloud provider backend communicates via Ollama's native HTTP API at `/api/chat` and `/api/tags`. It is the default engine on Apple Silicon and consumer NVIDIA GPUs.
 
 - **Default host:** `http://localhost:11434`
 - **Health check:** `GET /api/tags`
@@ -193,12 +193,12 @@ The Exo backend connects to the Exo distributed inference runtime, which partiti
 
 ### Nexa
 
-The Nexa backend connects to the Nexa SDK on-device inference server via a FastAPI shim (`nexa_shim.py`). It wraps `nexaai.LLM` as an OpenAI-compatible API on port 18181.
+The Nexa backend connects to the Nexa SDK cloud inference server via a FastAPI shim (`nexa_shim.py`). It wraps `nexaai.LLM` as an OpenAI-compatible API on port 18181.
 
 - **Default host:** `http://localhost:18181`
 - **Health check:** `GET /v1/models`
 - **Install:** `pip install nexaai`
-- **Best for:** On-device inference with GGUF models on Apple Silicon or CPU
+- **Best for:** cloud inference with GGUF models on Apple Silicon or CPU
 
 ### Lemonade
 
@@ -294,7 +294,7 @@ from freya.core.config import load_config
 
 config = load_config()
 healthy = discover_engines(config)
-# [("ollama", OllamaEngine(...)), ("vllm", VLLMEngine(...))]
+# [("ollama"Engine(...)), ("vllm", VLLMEngine(...))]
 ```
 
 ### `discover_models(engines)`
@@ -365,7 +365,7 @@ The `EngineConfig` dataclass and its per-engine sub-dataclasses map these settin
 | Config Class | Field | Default | Description |
 |---|---|---|---|
 | `EngineConfig` | `default` | `"ollama"` (hardware-dependent) | Preferred engine backend |
-| `OllamaEngineConfig` | `host` | `http://localhost:11434` | Ollama server URL |
+| `OllamaEngineConfig` | `host` | `http://localhost:11434` | freya server URL |
 | `VLLMEngineConfig` | `host` | `http://localhost:8000` | vLLM server URL |
 | `SGLangEngineConfig` | `host` | `http://localhost:30000` | SGLang server URL |
 | `LlamaCppEngineConfig` | `host` | `http://localhost:8080` | llama.cpp server URL |

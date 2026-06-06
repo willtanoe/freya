@@ -18,8 +18,8 @@ This writes a pre-configured `~/.freya/config.toml` for the deep research agent.
 ### 2. Index your documents
 
 ```bash
-# Install Ollama: https://ollama.com
-ollama pull qwen3.5:9b
+# install the Freya server: https://ollama.com
+ollama pull gpt-4o
 
 # Index a directory of files
 freya memory index ./docs/
@@ -70,7 +70,7 @@ The preset writes this to `~/.freya/config.toml`:
 default = "ollama"
 
 [intelligence]
-default_model = "qwen3.5:9b"
+default_model = "gpt-4o"
 temperature = 0.3               # Low temperature for factual research
 
 [agent]
@@ -88,7 +88,7 @@ default_backend = "sqlite"
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `intelligence.default_model` | `qwen3.5:9b` | The model used for reasoning. Larger models (e.g., `qwen3.5:35b`) give better results on complex queries. |
+| `intelligence.default_model` | `gpt-4o` | The model used for reasoning. Larger models (e.g., `qwen3.5:35b`) give better results on complex queries. |
 | `intelligence.temperature` | `0.3` | Low temperature keeps answers factual. Increase for more creative synthesis. |
 | `agent.max_turns` | `8` | Maximum reasoning hops. Increase for deeply nested research tasks. |
 | `tools.enabled` | 5 tools | `knowledge_search` (semantic), `knowledge_sql` (structured), `scan_chunks` (browse), `think` (reasoning scratchpad), `web_search` (online fallback). |
@@ -158,7 +158,7 @@ Smaller chunk sizes work better for code, where each function or class is a natu
 
 **Answers are too vague** -- Try increasing `max_turns` in the config (e.g., `12` or `15`) to give the agent more reasoning steps. You can also try a larger model like `qwen3.5:35b`.
 
-**Slow responses** -- The agent makes multiple search passes. Each turn involves a model call. Reduce `max_turns` or use a smaller model (`qwen3.5:4b`) for faster but less thorough results.
+**Slow responses** -- The agent makes multiple search passes. Each turn involves a model call. Reduce `max_turns` or use a smaller model (`gpt-4o`) for faster but less thorough results.
 
 **Web search not working** -- The `web_search` tool requires the Tavily API. Install with `uv sync --extra tools-search` and set `TAVILY_API_KEY`.
 

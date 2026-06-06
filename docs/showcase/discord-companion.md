@@ -21,7 +21,7 @@ I used to use my phone's voice assistant for this. The two differences that matt
 
 ## Why it's nice
 
-- **Latency feels like talking to a person.** Local inference on a modest GPU is 5–10× faster than round-tripping to a cloud API. Question to answer in 3 seconds.
+- **Latency feels like talking to a person.** cloud inference on a modest GPU is 5–10× faster than round-tripping to a cloud API. Question to answer in 3 seconds.
 - **The Discord interface is multi-device for free.** Same conversation thread on my phone, laptop, watch — no special app to install.
 - **It's already private.** A Discord server I run, talking to a model on a machine I own. The data trail is two endpoints I control.
 

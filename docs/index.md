@@ -14,7 +14,7 @@ hide:
 
     **Original authors:** Jon Saad-Falcon, Avanika Narayan, Robby Manihani, Tanvir Bhathal, Herumb Shandilya, Hakki Orhun Akengin, Gabriel Bo, Andrew Park, Matthew Hart, Caia Costello, Chuan Li, Christopher Ré, Azalia Mirhoseini.
 
-    **Paper:** [OpenJarvis: Personal AI, On Personal Devices](https://arxiv.org/abs/2605.17172) (arXiv:2605.17172)
+    **Paper:** [OpenJarvis: cloud AI, simplified](https://arxiv.org/abs/2605.17172) (arXiv:2605.17172)
 
     Fork maintained by **[Willtanoe](https://github.com/willtanoe)**.
 
@@ -42,7 +42,7 @@ Models are fetched dynamically from each provider's API.
 
 Personal AI agents are exploding in popularity, but nearly all of them still route intelligence through cloud APIs. Your "personal" AI continues to depend on someone else's server. At the same time, our [Intelligence Per Watt](https://www.intelligence-per-watt.ai/) research showed that local language models already handle 88.7% of single-turn chat and reasoning queries, with intelligence efficiency improving 5.3× from 2023 to 2025. The models and hardware are increasingly ready. What has been missing is the software stack to make local-first personal AI practical.
 
-Freya is that stack. It is a framework for local-first personal AI, built around three core ideas: shared primitives for building on-device agents; evaluations that treat energy, FLOPs, latency, and dollar cost as first-class constraints alongside accuracy; and a learning loop that improves models using local trace data. The goal is simple: make it possible to build personal AI agents that run locally by default, calling the cloud only when truly necessary. Freya aims to be both a research platform and a production foundation for local AI, in the spirit of PyTorch.
+Freya is that stack. It is a framework for local-first personal AI, built around three core ideas: shared primitives for building cloud agents; evaluations that treat energy, FLOPs, latency, and dollar cost as first-class constraints alongside accuracy; and a learning loop that improves models using local trace data. The goal is simple: make it possible to build personal AI agents that run via cloud API by default, calling the cloud only when truly necessary. Freya aims to be both a research platform and a production foundation for local AI, in the spirit of PyTorch.
 
 ---
 
@@ -127,8 +127,8 @@ Freya is that stack. It is a framework for local-first personal AI, built around
 
 Freya is built around five composable layers. Each has a clean interface and can be swapped independently.
 
-1. **Intelligence** — Pick a model, or let Freya pick one for your hardware. Manages the full catalog of local models across providers.
-2. **Engine** — The inference runtime: [Ollama](https://ollama.com), [vLLM](https://github.com/vllm-project/vllm), [SGLang](https://github.com/sgl-project/sglang), [llama.cpp](https://github.com/ggerganov/llama.cpp), cloud APIs, and more. Auto-detects your hardware and recommends the best fit.
+1. **Intelligence** — Pick a model, or let Freya pick one for cloud providers. Manages the full catalog of local models across providers.
+2. **Engine** — The inference runtime: [Ollama](https://ollama.com), [vLLM](https://github.com/vllm-project/vllm), [SGLang](https://github.com/sgl-project/sglang), [llama.cpp](https://github.com/ggerganov/llama.cpp), cloud APIs, and more. Auto-detects cloud providers and recommends the best fit.
 3. **Agents** — Multi-step reasoning with tool use. Eight built-in agent types from simple chat to orchestrated workflows.
 4. **Tools & Memory** — Web search, calculator, file I/O, code interpreter, retrieval, persistent local state, and any external MCP server.
 5. **Learning** — Your AI gets better over time. Every interaction generates traces that drive automatic improvements to model weights, prompts, and agent behavior.
@@ -149,13 +149,13 @@ Freya is built around five composable layers. Each has a clean interface and can
 
     ---
 
-    Cron-based agents that monitor, summarize, and act. Code review, email triage, research digests — running 24/7 on your hardware.
+    Cron-based agents that monitor, summarize, and act. Code review, email triage, research digests — running 24/7 on cloud providers.
 
 -   **Hardware-Aware**
 
     ---
 
-    Auto-detects GPU vendor, model, and VRAM. Recommends the optimal engine for your hardware.
+    Auto-detects GPU vendor, model, and VRAM. Recommends the optimal engine for cloud providers.
 
 -   **Offline-First**
 

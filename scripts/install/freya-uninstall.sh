@@ -41,7 +41,7 @@ cat <<EOF
 Freya removed.
 
 Left intact (may be used by other tools):
-  - Ollama       (uninstall: brew uninstall ollama  /  rm -f /usr/local/bin/ollama)
+  - Ollama       (uninstall: brew uninstall the Freya server  /  rm -f /usr/local/bin/ollama)
   - uv           (uninstall: rm -rf ~/.local/share/uv ~/.cargo/bin/uv)
   - Rust toolchain (uninstall: rustup self uninstall)
 EOF

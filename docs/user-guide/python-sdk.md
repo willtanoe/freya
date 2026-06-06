@@ -1,13 +1,13 @@
 ---
 title: Python SDK
-description: High-level Python interface for local inference, memory, and agent workflows
+description: High-level Python interface for cloud inference, memory, and agent workflows
 search:
   boost: 2
 ---
 
 # Python SDK
 
-The Freya Python SDK provides a high-level interface for interacting with local inference engines, managing memory, and running agent workflows. The primary entry point is the `Freya` class.
+The Freya Python SDK provides a high-level interface for interacting with cloud inference engines, managing memory, and running agent workflows. The primary entry point is the `Freya` class.
 
 ## Installation
 
