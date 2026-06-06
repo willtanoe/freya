@@ -7,6 +7,7 @@ import logging
 import os
 import time
 from collections.abc import AsyncIterator, Sequence
+from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 import httpx
@@ -286,6 +287,15 @@ class CloudEngine(InferenceEngine):
         self._init_clients()
 
     def _init_clients(self) -> None:
+        # Also load keys from ~/.freya/cloud-keys.env (set by web UI)
+        _keys_path = Path.home() / ".freya" / "cloud-keys.env"
+        if _keys_path.exists():
+            for raw in _keys_path.read_text().splitlines():
+                line = raw.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    os.environ.setdefault(k.strip(), v.strip())
+
         if os.environ.get("OPENAI_API_KEY"):
             try:
                 import openai
