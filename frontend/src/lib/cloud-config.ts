@@ -3,9 +3,29 @@
  *
  * Manages cloud provider configuration state and API calls.
  * This is the single source of truth for cloud provider status.
+ *
+ * Includes retry logic for Tauri desktop app where the backend
+ * server starts asynchronously and may not be ready immediately.
  */
 
 import { getBase, authHeaders } from './api';
+
+/**
+ * Fetch with retry — handles cold-start backend.
+ */
+async function fetchRetry(url: string, init: RequestInit, retries = 5): Promise<Response> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const res = await fetch(url, init);
+      return res;
+    } catch {
+      if (i < retries - 1) {
+        await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+      }
+    }
+  }
+  return fetch(url, init);
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -128,7 +148,7 @@ export const CLOUD_PROVIDERS: CloudProvider[] = [
 export async function fetchProviderStatus(): Promise<ProviderConfig[]> {
   try {
     const base = getBase();
-    const response = await fetch(`${base}/v1/providers/status`, {
+    const response = await fetchRetry(`${base}/v1/providers/status`, {
       headers: authHeaders({ 'Content-Type': 'application/json' }),
     });
 
@@ -161,7 +181,7 @@ export async function fetchProviderStatus(): Promise<ProviderConfig[]> {
 export async function fetchAvailableModels(): Promise<ProviderModels[]> {
   try {
     const base = getBase();
-    const response = await fetch(`${base}/v1/models/available`, {
+    const response = await fetchRetry(`${base}/v1/models/available`, {
       headers: authHeaders({ 'Content-Type': 'application/json' }),
     });
 
@@ -192,7 +212,7 @@ export async function configureProvider(
 ): Promise<{ success: boolean; message: string }> {
   try {
     const base = getBase();
-    const response = await fetch(`${base}/v1/providers/configure`, {
+    const response = await fetchRetry(`${base}/v1/providers/configure`, {
       method: 'POST',
       headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
@@ -228,7 +248,7 @@ export async function testProvider(
 ): Promise<TestResult> {
   try {
     const base = getBase();
-    const response = await fetch(`${base}/v1/providers/test`, {
+    const response = await fetchRetry(`${base}/v1/providers/test`, {
       method: 'POST',
       headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({

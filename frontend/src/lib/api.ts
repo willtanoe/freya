@@ -115,20 +115,19 @@ export async function fetchModels(): Promise<ModelInfo[]> {
       // Fall through to fetch
     }
   }
-  const res = await apiFetch(`/v1/models`);
-  if (!res.ok) throw new Error(`Failed to fetch models: ${res.status}`);
+  try { res = await apiFetch(`/v1/models`); } catch { await new Promise(r => setTimeout(r, 2000)); res = await apiFetch(`/v1/models`); }
   const data = await res.json();
   return data.data || [];
 }
 
 export async function fetchSavings(): Promise<SavingsData> {
-  const res = await apiFetch(`/v1/savings`);
+  let res = await apiFetch(`/v1/savings`);
   if (!res.ok) throw new Error(`Failed to fetch savings: ${res.status}`);
   return res.json();
 }
 
 export async function fetchServerInfo(): Promise<ServerInfo> {
-  const res = await apiFetch(`/v1/info`);
+  let res = await apiFetch(`/v1/info`);
   if (!res.ok) throw new Error(`Failed to fetch server info: ${res.status}`);
   return res.json();
 }
@@ -170,7 +169,7 @@ export async function fetchEnergy(): Promise<unknown> {
       return await tauriInvoke('fetch_energy', { apiUrl: getBase() });
     } catch {}
   }
-  const res = await apiFetch(`/v1/telemetry/energy`);
+  let res = await apiFetch(`/v1/telemetry/energy`);
   if (!res.ok) throw new Error(`Failed: ${res.status}`);
   return res.json();
 }
@@ -181,7 +180,7 @@ export async function fetchTelemetry(): Promise<unknown> {
       return await tauriInvoke('fetch_telemetry', { apiUrl: getBase() });
     } catch {}
   }
-  const res = await apiFetch(`/v1/telemetry/stats`);
+  let res = await apiFetch(`/v1/telemetry/stats`);
   if (!res.ok) throw new Error(`Failed: ${res.status}`);
   return res.json();
 }
@@ -192,7 +191,7 @@ export async function fetchTraces(limit: number = 50): Promise<unknown> {
       return await tauriInvoke('fetch_traces', { apiUrl: getBase(), limit });
     } catch {}
   }
-  const res = await apiFetch(`/v1/traces?limit=${limit}`);
+  let res = await apiFetch(`/v1/traces?limit=${limit}`);
   if (!res.ok) throw new Error(`Failed: ${res.status}`);
   return res.json();
 }
@@ -228,7 +227,7 @@ export async function transcribeAudio(audioBlob: Blob, filename = 'recording.web
   }
   const formData = new FormData();
   formData.append('file', audioBlob, filename);
-  const res = await apiFetch(`/v1/speech/transcribe`, {
+  let res = await apiFetch(`/v1/speech/transcribe`, {
     method: 'POST',
     body: formData,
   });
@@ -244,7 +243,7 @@ export async function fetchSpeechHealth(): Promise<SpeechHealth> {
       return { available: false };
     }
   }
-  const res = await apiFetch(`/v1/speech/health`);
+  let res = await apiFetch(`/v1/speech/health`);
   if (!res.ok) return { available: false };
   return res.json();
 }
@@ -328,14 +327,14 @@ export interface AgentMessage {
 }
 
 export async function fetchManagedAgents(): Promise<ManagedAgent[]> {
-  const res = await apiFetch(`/v1/managed-agents`);
+  let res = await apiFetch(`/v1/managed-agents`);
   if (!res.ok) throw new Error(`Failed: ${res.status}`);
   const data = await res.json();
   return data.agents || [];
 }
 
 export async function fetchManagedAgent(agentId: string): Promise<ManagedAgent> {
-  const res = await apiFetch(`/v1/managed-agents/${agentId}`);
+  let res = await apiFetch(`/v1/managed-agents/${agentId}`);
   if (!res.ok) throw new Error(`Failed: ${res.status}`);
   return res.json();
 }
@@ -346,7 +345,7 @@ export async function createManagedAgent(body: {
   template_id?: string;
   config?: Record<string, unknown>;
 }): Promise<ManagedAgent> {
-  const res = await apiFetch(`/v1/managed-agents`, {
+  let res = await apiFetch(`/v1/managed-agents`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -359,7 +358,7 @@ export async function updateManagedAgent(
   agentId: string,
   body: Partial<{ name: string; agent_type: string; config: Record<string, unknown> }>,
 ): Promise<ManagedAgent> {
-  const res = await apiFetch(`/v1/managed-agents/${agentId}`, {
+  let res = await apiFetch(`/v1/managed-agents/${agentId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -369,29 +368,29 @@ export async function updateManagedAgent(
 }
 
 export async function deleteManagedAgent(agentId: string): Promise<void> {
-  const res = await apiFetch(`/v1/managed-agents/${agentId}`, { method: 'DELETE' });
+  let res = await apiFetch(`/v1/managed-agents/${agentId}`, { method: 'DELETE' });
   if (!res.ok) throw new Error(`Failed: ${res.status}`);
 }
 
 export async function pauseManagedAgent(agentId: string): Promise<void> {
-  const res = await apiFetch(`/v1/managed-agents/${agentId}/pause`, { method: 'POST' });
+  let res = await apiFetch(`/v1/managed-agents/${agentId}/pause`, { method: 'POST' });
   if (!res.ok) throw new Error(`Failed: ${res.status}`);
 }
 
 export async function resumeManagedAgent(agentId: string): Promise<void> {
-  const res = await apiFetch(`/v1/managed-agents/${agentId}/resume`, { method: 'POST' });
+  let res = await apiFetch(`/v1/managed-agents/${agentId}/resume`, { method: 'POST' });
   if (!res.ok) throw new Error(`Failed: ${res.status}`);
 }
 
 export async function fetchAgentTasks(agentId: string): Promise<AgentTask[]> {
-  const res = await apiFetch(`/v1/managed-agents/${agentId}/tasks`);
+  let res = await apiFetch(`/v1/managed-agents/${agentId}/tasks`);
   if (!res.ok) throw new Error(`Failed: ${res.status}`);
   const data = await res.json();
   return data.tasks || [];
 }
 
 export async function createAgentTask(agentId: string, description: string): Promise<AgentTask> {
-  const res = await apiFetch(`/v1/managed-agents/${agentId}/tasks`, {
+  let res = await apiFetch(`/v1/managed-agents/${agentId}/tasks`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ description }),
@@ -401,7 +400,7 @@ export async function createAgentTask(agentId: string, description: string): Pro
 }
 
 export async function fetchAgentChannels(agentId: string): Promise<ChannelBinding[]> {
-  const res = await apiFetch(`/v1/managed-agents/${agentId}/channels`);
+  let res = await apiFetch(`/v1/managed-agents/${agentId}/channels`);
   if (!res.ok) throw new Error(`Failed: ${res.status}`);
   const data = await res.json();
   return data.bindings || [];
@@ -445,7 +444,7 @@ export async function sendblueVerify(
   apiKeyId: string,
   apiSecretKey: string,
 ): Promise<{ valid: boolean; numbers: string[]; raw: unknown }> {
-  const res = await apiFetch(`/v1/channels/sendblue/verify`, {
+  let res = await apiFetch(`/v1/channels/sendblue/verify`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ api_key_id: apiKeyId, api_secret_key: apiSecretKey }),
@@ -462,7 +461,7 @@ export async function sendblueRegisterWebhook(
   apiSecretKey: string,
   webhookUrl: string,
 ): Promise<{ registered: boolean; status: number }> {
-  const res = await apiFetch(`/v1/channels/sendblue/register-webhook`, {
+  let res = await apiFetch(`/v1/channels/sendblue/register-webhook`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -484,7 +483,7 @@ export async function sendblueTest(
   fromNumber: string,
   toNumber: string,
 ): Promise<{ sent: boolean; status: number }> {
-  const res = await apiFetch(`/v1/channels/sendblue/test`, {
+  let res = await apiFetch(`/v1/channels/sendblue/test`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -502,20 +501,20 @@ export async function sendblueTest(
 }
 
 export async function sendblueHealth(): Promise<{ channel_connected: boolean; bridge_wired: boolean; ready: boolean }> {
-  const res = await apiFetch(`/v1/channels/sendblue/health`);
+  let res = await apiFetch(`/v1/channels/sendblue/health`);
   if (!res.ok) return { channel_connected: false, bridge_wired: false, ready: false };
   return res.json();
 }
 
 export async function fetchTemplates(): Promise<AgentTemplate[]> {
-  const res = await apiFetch(`/v1/templates`);
+  let res = await apiFetch(`/v1/templates`);
   if (!res.ok) throw new Error(`Failed: ${res.status}`);
   const data = await res.json();
   return data.templates || [];
 }
 
 export async function runManagedAgent(agentId: string): Promise<void> {
-  const res = await apiFetch(`/v1/managed-agents/${agentId}/run`, { method: 'POST' });
+  let res = await apiFetch(`/v1/managed-agents/${agentId}/run`, { method: 'POST' });
   if (!res.ok) {
     const body = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(body.detail || `Failed: ${res.status}`);
@@ -523,7 +522,7 @@ export async function runManagedAgent(agentId: string): Promise<void> {
 }
 
 export async function recoverManagedAgent(agentId: string): Promise<{ recovered: boolean; checkpoint: unknown }> {
-  const res = await apiFetch(`/v1/managed-agents/${agentId}/recover`, { method: 'POST' });
+  let res = await apiFetch(`/v1/managed-agents/${agentId}/recover`, { method: 'POST' });
   if (!res.ok) {
     const body = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(body.detail || `Failed: ${res.status}`);
@@ -538,7 +537,7 @@ export async function fetchAgentState(agentId: string): Promise<{
   messages: AgentMessage[];
   checkpoint: unknown;
 }> {
-  const res = await apiFetch(`/v1/managed-agents/${agentId}/state`);
+  let res = await apiFetch(`/v1/managed-agents/${agentId}/state`);
   if (!res.ok) throw new Error(`Failed: ${res.status}`);
   return res.json();
 }
@@ -567,7 +566,7 @@ export async function sendAgentMessage(
     onDone?: (fullContent: string, usage?: Record<string, number>, telemetry?: Record<string, unknown>) => void;
   },
 ): Promise<AgentMessage> {
-  const res = await apiFetch(`/v1/managed-agents/${agentId}/messages`, {
+  let res = await apiFetch(`/v1/managed-agents/${agentId}/messages`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ content, mode, stream: true }),
@@ -682,7 +681,7 @@ export async function sendAgentMessage(
  * the `/v1/agents/events` WebSocket and the resulting trace.
  */
 export async function askAgent(agentId: string, content: string): Promise<AgentMessage> {
-  const res = await apiFetch(`/v1/managed-agents/${agentId}/messages`, {
+  let res = await apiFetch(`/v1/managed-agents/${agentId}/messages`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ content, mode: 'immediate', stream: false }),
@@ -692,14 +691,14 @@ export async function askAgent(agentId: string, content: string): Promise<AgentM
 }
 
 export async function fetchAgentMessages(agentId: string): Promise<AgentMessage[]> {
-  const res = await apiFetch(`/v1/managed-agents/${agentId}/messages`);
+  let res = await apiFetch(`/v1/managed-agents/${agentId}/messages`);
   if (!res.ok) throw new Error(`Failed: ${res.status}`);
   const data = await res.json();
   return data.messages || [];
 }
 
 export async function fetchErrorAgents(): Promise<ManagedAgent[]> {
-  const res = await apiFetch(`/v1/agents/errors`);
+  let res = await apiFetch(`/v1/agents/errors`);
   if (!res.ok) throw new Error(`Failed: ${res.status}`);
   const data = await res.json();
   return data.agents || [];
@@ -739,7 +738,7 @@ export interface ToolInfo {
 }
 
 export async function fetchAvailableTools(): Promise<ToolInfo[]> {
-  const res = await apiFetch(`/v1/tools`);
+  let res = await apiFetch(`/v1/tools`);
   if (!res.ok) throw new Error(`Failed: ${res.status}`);
   const data = await res.json();
   return data.tools || [];
@@ -749,7 +748,7 @@ export async function saveToolCredentials(
   toolName: string,
   credentials: Record<string, string>,
 ): Promise<void> {
-  const res = await apiFetch(`/v1/tools/${toolName}/credentials`, {
+  let res = await apiFetch(`/v1/tools/${toolName}/credentials`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(credentials),
@@ -773,26 +772,26 @@ export interface AgentTraceDetail {
 }
 
 export async function fetchLearningLog(agentId: string): Promise<LearningLogEntry[]> {
-  const res = await apiFetch(`/v1/managed-agents/${agentId}/learning`);
+  let res = await apiFetch(`/v1/managed-agents/${agentId}/learning`);
   if (!res.ok) throw new Error(`Failed: ${res.status}`);
   const data = await res.json();
   return data.learning_log || [];
 }
 
 export async function triggerLearning(agentId: string): Promise<void> {
-  const res = await apiFetch(`/v1/managed-agents/${agentId}/learning/run`, { method: 'POST' });
+  let res = await apiFetch(`/v1/managed-agents/${agentId}/learning/run`, { method: 'POST' });
   if (!res.ok) throw new Error(`Failed: ${res.status}`);
 }
 
 export async function fetchAgentTraces(agentId: string, limit = 20): Promise<AgentTrace[]> {
-  const res = await apiFetch(`/v1/managed-agents/${agentId}/traces?limit=${limit}`);
+  let res = await apiFetch(`/v1/managed-agents/${agentId}/traces?limit=${limit}`);
   if (!res.ok) throw new Error(`Failed: ${res.status}`);
   const data = await res.json();
   return data.traces || [];
 }
 
 export async function fetchAgentTrace(agentId: string, traceId: string): Promise<AgentTraceDetail> {
-  const res = await apiFetch(`/v1/managed-agents/${agentId}/traces/${traceId}`);
+  let res = await apiFetch(`/v1/managed-agents/${agentId}/traces/${traceId}`);
   if (!res.ok) throw new Error(`Failed: ${res.status}`);
   return res.json();
 }
@@ -860,13 +859,13 @@ export interface MemoryConfig {
 }
 
 export async function getMemoryStats(): Promise<MemoryStats> {
-  const res = await apiFetch(`/v1/memory/stats`);
+  let res = await apiFetch(`/v1/memory/stats`);
   if (!res.ok) throw new Error('Failed to fetch memory stats');
   return res.json();
 }
 
 export async function searchMemory(query: string, topK: number = 5): Promise<MemorySearchResult[]> {
-  const res = await apiFetch(`/v1/memory/search`, {
+  let res = await apiFetch(`/v1/memory/search`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query, top_k: topK }),
@@ -877,7 +876,7 @@ export async function searchMemory(query: string, topK: number = 5): Promise<Mem
 }
 
 export async function storeMemory(content: string, metadata?: Record<string, unknown>): Promise<void> {
-  const res = await apiFetch(`/v1/memory/store`, {
+  let res = await apiFetch(`/v1/memory/store`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ content, metadata }),
@@ -886,7 +885,7 @@ export async function storeMemory(content: string, metadata?: Record<string, unk
 }
 
 export async function indexMemoryPath(path: string): Promise<{ chunks_indexed: number }> {
-  const res = await apiFetch(`/v1/memory/index`, {
+  let res = await apiFetch(`/v1/memory/index`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ path }),
@@ -896,7 +895,7 @@ export async function indexMemoryPath(path: string): Promise<{ chunks_indexed: n
 }
 
 export async function getMemoryConfig(): Promise<MemoryConfig> {
-  const res = await apiFetch(`/v1/memory/config`);
+  let res = await apiFetch(`/v1/memory/config`);
   if (!res.ok) throw new Error('Failed to fetch memory config');
   return res.json();
 }
@@ -918,19 +917,19 @@ export interface PendingApproval {
 }
 
 export async function fetchPendingApprovals(): Promise<PendingApproval[]> {
-  const res = await apiFetch(`/v1/approvals/pending`);
+  let res = await apiFetch(`/v1/approvals/pending`);
   if (!res.ok) throw new Error(`Failed: ${res.status}`);
   const data = await res.json();
   return data.actions || [];
 }
 
 export async function approveAction(actionId: string): Promise<void> {
-  const res = await apiFetch(`/v1/approvals/${actionId}/approve`, { method: 'POST' });
+  let res = await apiFetch(`/v1/approvals/${actionId}/approve`, { method: 'POST' });
   if (!res.ok) throw new Error(`Failed: ${res.status}`);
 }
 
 export async function denyAction(actionId: string): Promise<void> {
-  const res = await apiFetch(`/v1/approvals/${actionId}/deny`, { method: 'POST' });
+  let res = await apiFetch(`/v1/approvals/${actionId}/deny`, { method: 'POST' });
   if (!res.ok) throw new Error(`Failed: ${res.status}`);
 }
 
