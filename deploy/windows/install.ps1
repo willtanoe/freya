@@ -145,11 +145,14 @@ Write-Ok "Windows build $build"
 # ---------------------------------------------------------------------------
 
 function Get-PythonCommand {
-    # Prefer `python3` (matches our cross-platform helper convention),
-    # fall back to `python` (the Windows store / python.org default).
-    foreach ($name in @('python3', 'python')) {
+    # Try `python` first (standard on Windows), then `python3`.
+    # Skip Microsoft Store stub (python3.exe that prints "install from Store").
+    foreach ($name in @('python', 'python3')) {
         $cmd = Get-Command $name -ErrorAction SilentlyContinue
-        if ($cmd) { return $cmd.Source }
+        if (-not $cmd) { continue }
+        # Skip Microsoft Store stub
+        if ($cmd.Source -match '\\AppData\\Local\\Microsoft\\WindowsApps\\') { continue }
+        return $cmd.Source
     }
     return $null
 }
