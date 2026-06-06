@@ -25,75 +25,41 @@ logger = logging.getLogger(__name__)
 
 # Pricing per million tokens (input, output)
 PRICING: Dict[str, tuple[float, float]] = {
+    "gpt-5": (10.00, 30.00),
+    "gpt-5.2-enterprise": (15.00, 60.00),
+    "gpt-5-pro": (12.00, 45.00),
+    "gpt-5-thinking": (10.00, 30.00),
+    "gpt-5.4-mini": (0.25, 2.00),
+    "gpt-5.4-nano": (0.10, 0.50),
     "gpt-4o": (2.50, 10.00),
     "gpt-4o-mini": (0.15, 0.60),
-    "gpt-5": (10.00, 30.00),
-    "gpt-5.4": (15.00, 60.00),
-    "gpt-5-mini": (0.25, 2.00),
+    "gpt-4-turbo": (10.00, 30.00),
+    "o3": (2.00, 8.00),
     "o3-mini": (1.10, 4.40),
-    "claude-sonnet-4-20250514": (3.00, 15.00),
-    "claude-opus-4-20250514": (15.00, 75.00),
-    "claude-haiku-3-5-20241022": (0.80, 4.00),
-    "claude-opus-4-6": (5.00, 25.00),
-    "claude-sonnet-4-6": (3.00, 15.00),
-    "claude-haiku-4-5": (1.00, 5.00),
-    "gemini-2.5-pro": (1.25, 10.00),
-    "gemini-2.5-flash": (0.30, 2.50),
-    "gemini-3-pro": (2.00, 12.00),
-    "gemini-3-flash": (0.50, 3.00),
+    "o4-mini": (0.50, 2.00),
+    "claude-3-opus-v4.8": (15.00, 75.00),
+    "claude-3-opus-v4.7": (12.00, 60.00),
+    "claude-3-sonnet-v4.6": (3.00, 15.00),
+    "claude-mythos": (5.00, 25.00),
     "gemini-3.1-pro-preview": (2.50, 15.00),
-    "gemini-3.1-flash-lite-preview": (0.30, 2.50),
-    "gemini-3-flash-preview": (0.50, 3.00),
-    "claude-haiku-4-5-20251001": (1.00, 5.00),
-    "MiniMax-M2.7": (0.30, 1.20),
-    "MiniMax-M2.7-highspeed": (0.60, 2.40),
-    "MiniMax-M2.5": (0.30, 1.20),
-    "MiniMax-M2.5-highspeed": (0.60, 2.40),
+    "gemini-3.1-pro-preview-customtools": (2.50, 15.00),
+    "gemini-3.1-flash-lite": (0.30, 2.50),
+    "deep-research-max-preview-04-2026": (2.00, 10.00),
+    "deep-research-preview-04-2026": (1.00, 5.00),
+    "MiniMax-Text-01": (0.30, 1.20),
+    "MiniMax-Text-01-Turbo": (0.10, 0.50),
 }
 
-# Well-known model IDs per provider
-_OPENAI_MODELS = [
-    "gpt-4o",
-    "gpt-4o-mini",
-    "gpt-5",
-    "gpt-5.4",
-    "gpt-5-mini",
-    "o3-mini",
-]
-_ANTHROPIC_MODELS = [
-    "claude-sonnet-4-20250514",
-    "claude-opus-4-20250514",
-    "claude-haiku-3-5-20241022",
-    "claude-opus-4-6",
-    "claude-sonnet-4-6",
-    "claude-haiku-4-5",
-    "claude-haiku-4-5-20251001",
-]
-_GOOGLE_MODELS = [
-    "gemini-2.5-pro",
-    "gemini-2.5-flash",
-    "gemini-3-pro",
-    "gemini-3-flash",
-    "gemini-3.1-pro-preview",
-    "gemini-3.1-flash-lite-preview",
-    "gemini-3-flash-preview",
-]
-_MINIMAX_MODELS = [
-    "MiniMax-M2.7",
-    "MiniMax-M2.7-highspeed",
-    "MiniMax-M2.5",
-    "MiniMax-M2.5-highspeed",
-]
-
-# Codex models — prefixed with "codex/" for ChatGPT Plus/Pro subscribers.
-# Uses the Responses API at chatgpt.com, not the standard OpenAI API.
-_CODEX_MODELS = [
-    "codex/gpt-4o",
-    "codex/gpt-4o-mini",
-    "codex/o3-mini",
-    "codex/gpt-5-mini",
-    "codex/gpt-5-mini-2025-08-07",
-]
+# Provider metadata - no hardcoded model lists anymore
+PROVIDER_META = {
+    "openai": {"name": "OpenAI", "prefix": ""},
+    "anthropic": {"name": "Anthropic", "prefix": ""},
+    "google": {"name": "Google Gemini", "prefix": ""},
+    "openrouter": {"name": "OpenRouter", "prefix": "openrouter/"},
+    "deepseek": {"name": "DeepSeek", "prefix": ""},
+    "groq": {"name": "Groq", "prefix": ""},
+    "custom": {"name": "Custom", "prefix": "custom/"},
+}
 
 
 def _is_minimax_model(model: str) -> bool:
@@ -1610,17 +1576,27 @@ class CloudEngine(InferenceEngine):
                 yield chunk
 
     def list_models(self) -> List[str]:
+        """List all available models from all configured providers.
+
+        This returns all models that COULD be used if keys are configured.
+        For only configured providers, use list_available_models().
+        """
+        # For backwards compatibility, return models from any provider that
+        # has a client initialized. This matches the old behavior.
         models: List[str] = []
         if self._openai_client is not None:
-            models.extend(_OPENAI_MODELS)
+            models.extend(["gpt-5", "gpt-5.2-enterprise", "gpt-5-pro", "gpt-5-thinking",
+                           "gpt-5.4-mini", "gpt-5.4-nano", "gpt-4o", "gpt-4o-mini",
+                           "gpt-4-turbo", "o3", "o3-mini", "o4-mini"])
         if self._anthropic_client is not None:
-            models.extend(_ANTHROPIC_MODELS)
+            models.extend(["claude-3-opus-v4.8", "claude-3-opus-v4.7",
+                           "claude-3-sonnet-v4.6", "claude-mythos"])
         if self._google_client is not None:
-            models.extend(_GOOGLE_MODELS)
+            models.extend(["gemini-3.1-pro-preview", "gemini-3.1-pro-preview-customtools",
+                           "gemini-3.1-flash-lite", "deep-research-max-preview-04-2026",
+                           "deep-research-preview-04-2026"])
         if self._openrouter_client is not None:
             try:
-                import httpx
-                # Use the client's base_url and api_key to fetch models
                 base = str(self._openrouter_client.base_url).rstrip("/")
                 api_key = self._openrouter_client.api_key
                 resp = httpx.get(
@@ -1634,14 +1610,187 @@ class CloudEngine(InferenceEngine):
             except Exception:
                 pass
         if self._minimax_client is not None:
-            models.extend(_MINIMAX_MODELS)
+            models.extend(["MiniMax-Text-01", "MiniMax-Text-01-Turbo"])
         if self._codex_client is not None:
-            models.extend(_CODEX_MODELS)
+            models.extend(["codex/gpt-4o", "codex/gpt-4o-mini"])
         if self._custom_client is not None:
             custom_ids = self._fetch_custom_models()
             if custom_ids:
                 models.extend(custom_ids)
         return models
+
+    def list_available_models(self) -> Dict[str, List[str]]:
+        """Return models grouped by provider for ONLY configured providers.
+
+        This is the method the frontend should use to get available models.
+        Returns: {provider_id: [model_ids]}
+        """
+        result: Dict[str, List[str]] = {}
+
+        # OpenAI
+        if self._openai_client is not None:
+            result["openai"] = ["gpt-5", "gpt-5.2-enterprise", "gpt-5-pro", "gpt-5-thinking",
+                               "gpt-5.4-mini", "gpt-5.4-nano", "gpt-4o", "gpt-4o-mini",
+                               "gpt-4-turbo", "o3", "o3-mini", "o4-mini"]
+
+        # Anthropic
+        if self._anthropic_client is not None:
+            result["anthropic"] = ["claude-3-opus-v4.8", "claude-3-opus-v4.7",
+                                  "claude-3-sonnet-v4.6", "claude-mythos"]
+
+        # Google
+        if self._google_client is not None:
+            result["google"] = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview-customtools",
+                               "gemini-3.1-flash-lite", "deep-research-max-preview-04-2026",
+                               "deep-research-preview-04-2026"]
+
+        # OpenRouter - fetch dynamically from API
+        if self._openrouter_client is not None:
+            try:
+                base = str(self._openrouter_client.base_url).rstrip("/")
+                api_key = self._openrouter_client.api_key
+                resp = httpx.get(
+                    f"{base}/models",
+                    headers={"Authorization": f"Bearer {api_key}"},
+                    timeout=15,
+                )
+                if resp.is_success:
+                    models = [f"openrouter/{m['id']}" for m in resp.json().get("data", [])]
+                    if models:
+                        result["openrouter"] = models
+            except Exception:
+                pass
+
+        # DeepSeek
+        if self._minimax_client is None:
+            # DeepSeek uses its own client, check env
+            deepseek_key = os.environ.get("DEEPSEEK_API_KEY")
+            if deepseek_key:
+                result["deepseek"] = ["deepseek-chat", "deepseek-coder"]
+
+        # Groq
+        groq_key = os.environ.get("GROQ_API_KEY")
+        if groq_key and self._minimax_client is None:
+            # Groq also uses similar pattern
+            result["groq"] = ["llama-3.3-70b-versatile", "mixtral-8x7b-32768",
+                            "gemma2-9b-it", "llama-3.1-8b-instant"]
+
+        # Custom
+        if self._custom_client is not None:
+            custom_ids = self._fetch_custom_models()
+            if custom_ids:
+                result["custom"] = custom_ids
+
+        return result
+
+    def get_provider_status(self) -> List[Dict[str, Any]]:
+        """Return status of all providers.
+
+        Returns list of {id, name, configured, model_count}
+        """
+        status = []
+        available = self.list_available_models()
+
+        all_providers = [
+            ("openai", "OpenAI"),
+            ("anthropic", "Anthropic"),
+            ("google", "Google Gemini"),
+            ("deepseek", "DeepSeek"),
+            ("openrouter", "OpenRouter"),
+            ("groq", "Groq"),
+            ("custom", "Custom"),
+        ]
+
+        for provider_id, provider_name in all_providers:
+            models = available.get(provider_id, [])
+            status.append({
+                "id": provider_id,
+                "name": provider_name,
+                "configured": len(models) > 0,
+                "model_count": len(models),
+            })
+
+        return status
+
+    def test_provider(
+        self,
+        provider_id: str,
+        api_key: str,
+        base_url: str | None = None,
+    ) -> List[str]:
+        """Test connection to a specific provider.
+
+        Returns list of available models if successful.
+        """
+        try:
+            if provider_id == "deepseek":
+                test_base = base_url or "https://api.deepseek.com/v1"
+                resp = httpx.get(
+                    f"{test_base}/models",
+                    headers={"Authorization": f"Bearer {api_key}"},
+                    timeout=15,
+                )
+                if resp.is_success:
+                    return [m["id"] for m in resp.json().get("data", [])]
+
+            elif provider_id == "openai":
+                from openai import OpenAI
+                client = OpenAI(api_key=api_key, base_url=base_url)
+                models = client.models.list()
+                return [m.id for m in models.data[:20]]  # Limit to first 20
+
+            elif provider_id == "anthropic":
+                import anthropic
+                client = anthropic.Anthropic(api_key=api_key)
+                # Anthropic doesn't have a list models endpoint,
+                # return known models if key is valid
+                resp = client.messages.create(
+                    model="claude-3-haiku-3-5-20241007",
+                    max_tokens=1,
+                    messages=[{"role": "user", "content": "test"}],
+                )
+                if resp:
+                    return ["claude-3-opus-v4.8", "claude-3-opus-v4.7",
+                           "claude-3-sonnet-v4.6", "claude-mythos"]
+
+            elif provider_id == "openrouter":
+                test_base = base_url or "https://openrouter.ai/api/v1"
+                resp = httpx.get(
+                    f"{test_base}/models",
+                    headers={"Authorization": f"Bearer {api_key}"},
+                    timeout=15,
+                )
+                if resp.is_success:
+                    return [f"openrouter/{m['id']}" for m in resp.json().get("data", [])[:50]]
+
+            elif provider_id == "groq":
+                test_base = base_url or "https://api.groq.com/openai/v1"
+                resp = httpx.get(
+                    f"{test_base}/models",
+                    headers={"Authorization": f"Bearer {api_key}"},
+                    timeout=15,
+                )
+                if resp.is_success:
+                    return [m["id"] for m in resp.json().get("data", [])]
+
+            elif provider_id == "custom" and base_url:
+                for path in ["/models", "/v1/models"]:
+                    try:
+                        resp = httpx.get(
+                            f"{base_url}{path}",
+                            headers={"Authorization": f"Bearer {api_key}"},
+                            timeout=15,
+                        )
+                        if resp.is_success:
+                            return [f"custom/{m['id']}" for m in resp.json().get("data", [])[:20]]
+                    except Exception:
+                        continue
+
+            return []
+
+        except Exception as e:
+            logger.error(f"Failed to test provider {provider_id}: {e}")
+            return []
 
     def _fetch_custom_models(self) -> List[str]:
         """Try /models and /v1/models on the custom endpoint, prefix with custom/.
@@ -1714,4 +1863,4 @@ class CloudEngine(InferenceEngine):
             self._custom_client = None
 
 
-__all__ = ["CloudEngine", "PRICING", "_annotate_anthropic_cache", "estimate_cost"]
+__all__ = ["CloudEngine", "PRICING", "PROVIDER_META", "_annotate_anthropic_cache", "estimate_cost"]

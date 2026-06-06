@@ -1,92 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Cloud,
   Key,
   Globe,
   CheckCircle2,
   Loader2,
+  XCircle,
+  ArrowLeft,
+  ExternalLink,
   AlertCircle,
+  RefreshCw,
 } from 'lucide-react';
 import { useAppStore } from '../../lib/store';
+import {
+  CLOUD_PROVIDERS,
+  fetchProviderStatus,
+  configureProvider,
+  testProvider,
+  type ProviderConfig,
+  type TestResult,
+} from '../../lib/cloud-config';
 
 // ---------------------------------------------------------------------------
-// Cloud provider definitions
-// ---------------------------------------------------------------------------
-
-interface CloudProvider {
-  id: string;
-  name: string;
-  modelExample: string;
-  baseUrl: string;
-  keyPlaceholder: string;
-  docsUrl?: string;
-  docsLabel?: string;
-}
-
-const PROVIDERS: CloudProvider[] = [
-  {
-    id: 'openai',
-    name: 'OpenAI',
-    modelExample: 'gpt-4o, gpt-4o-mini, gpt-3.5-turbo',
-    baseUrl: 'https://api.openai.com/v1',
-    keyPlaceholder: 'sk-...',
-    docsUrl: 'https://platform.openai.com/api-keys',
-    docsLabel: 'Get API key →',
-  },
-  {
-    id: 'anthropic',
-    name: 'Anthropic',
-    modelExample: 'claude-3-5-sonnet, claude-3-haiku',
-    baseUrl: 'https://api.anthropic.com/v1',
-    keyPlaceholder: 'sk-ant-...',
-    docsUrl: 'https://console.anthropic.com/settings/keys',
-    docsLabel: 'Get API key →',
-  },
-  {
-    id: 'google',
-    name: 'Google (Gemini)',
-    modelExample: 'gemini-2.0-flash, gemini-1.5-pro',
-    baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
-    keyPlaceholder: 'AI...',
-    docsUrl: 'https://aistudio.google.com/app/apikey',
-    docsLabel: 'Get API key →',
-  },
-  {
-    id: 'openrouter',
-    name: 'OpenRouter',
-    modelExample: 'anthropic/claude-3.5-sonnet, openai/gpt-4o',
-    baseUrl: 'https://openrouter.ai/api/v1',
-    keyPlaceholder: 'sk-or-...',
-    docsUrl: 'https://openrouter.ai/keys',
-    docsLabel: 'Get API key →',
-  },
-  {
-    id: 'deepseek',
-    name: 'DeepSeek',
-    modelExample: 'deepseek-chat, deepseek-coder',
-    baseUrl: 'https://api.deepseek.com/v1',
-    keyPlaceholder: 'sk-...',
-  },
-  {
-    id: 'groq',
-    name: 'Groq',
-    modelExample: 'llama-3.3-70b, mixtral-8x7b',
-    baseUrl: 'https://api.groq.com/openai/v1',
-    keyPlaceholder: 'gsk_...',
-    docsUrl: 'https://console.groq.com/keys',
-    docsLabel: 'Get API key →',
-  },
-  {
-    id: 'custom',
-    name: 'Custom Provider',
-    modelExample: 'Any OpenAI-compatible model',
-    baseUrl: '',
-    keyPlaceholder: 'sk-...',
-  },
-];
-
-// ---------------------------------------------------------------------------
-// CloudOnboarding — provider selection + API key + custom base URL
+// CloudOnboarding — Provider configuration with status indicators
 // ---------------------------------------------------------------------------
 
 export function CloudOnboarding({
@@ -95,70 +31,49 @@ export function CloudOnboarding({
   onComplete: () => void;
 }) {
   const updateSettings = useAppStore((s) => s.updateSettings);
+  const [providerStatus, setProviderStatus] = useState<ProviderConfig[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
 
-  const [providerId, setProviderId] = useState('openai');
-  const [apiKey, setApiKey] = useState('');
-  const [customBaseUrl, setCustomBaseUrl] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  // Fetch provider status on mount
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      const status = await fetchProviderStatus();
+      setProviderStatus(status);
+      setLoading(false);
+    };
+    load();
+  }, []);
 
-  const selectedProvider = PROVIDERS.find((p) => p.id === providerId)!;
-  const isCustom = providerId === 'custom';
-  const canFinish =
-    apiKey.trim().length > 0 &&
-    (!isCustom || customBaseUrl.trim().length > 0);
-
-  const handleFinish = async () => {
-    if (!canFinish || saving) return;
-    setSaving(true);
-    setError('');
-
-    try {
-      if (isCustom) {
-        // Save custom provider key and base URL
-        localStorage.setItem('freya-custom-base-url', customBaseUrl.trim());
-        localStorage.setItem('freya-custom-key', apiKey.trim());
-        await fetch('/v1/cloud/keys', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            keys: {
-              CUSTOM_API_KEY: apiKey.trim(),
-              OPENAI_BASE_URL: customBaseUrl.trim(),
-            },
-          }),
-        }).catch(() => {});
-      } else {
-        // Save provider-specific key
-        const envKeyMap: Record<string, string> = {
-          openai: 'OPENAI_API_KEY',
-          anthropic: 'ANTHROPIC_API_KEY',
-          google: 'GEMINI_API_KEY',
-          openrouter: 'OPENROUTER_API_KEY',
-          deepseek: 'DEEPSEEK_API_KEY',
-          groq: 'GROQ_API_KEY',
-        };
-        const envKey = envKeyMap[providerId];
-        const storageKey = `freya-${providerId}-key`;
-        localStorage.setItem(storageKey, apiKey.trim());
-
-        await fetch('/v1/cloud/keys', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ keys: { [envKey]: apiKey.trim() } }),
-        }).catch(() => {});
-      }
-
-      // Update store with inference mode
-      updateSettings({ inferenceMode: 'cloud' });
-      onComplete();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(msg || 'Failed to save configuration.');
-    } finally {
-      setSaving(false);
-    }
+  const handleProviderClick = (providerId: string) => {
+    setSelectedProvider(providerId);
   };
+
+  const handleBack = () => {
+    setSelectedProvider(null);
+  };
+
+  const handleFinish = () => {
+    updateSettings({ inferenceMode: 'cloud' });
+    onComplete();
+  };
+
+  const configuredCount = providerStatus.filter((p) => p.configured).length;
+
+  if (selectedProvider) {
+    return (
+      <ConfigureProviderView
+        providerId={selectedProvider}
+        onBack={handleBack}
+        onConfigured={() => {
+          // Refresh status
+          fetchProviderStatus().then(setProviderStatus);
+          setSelectedProvider(null);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -172,60 +87,213 @@ export function CloudOnboarding({
           Cloud Setup
         </div>
         <h2 className="text-xl font-bold mb-1" style={{ color: 'var(--color-text)' }}>
-          Connect to a cloud provider
+          Connect cloud providers
         </h2>
         <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-          Choose your preferred AI provider and enter your API key to get started.
+          Configure your API keys. Only providers with keys will show models.
         </p>
       </div>
 
-      <div className="flex-1 flex flex-col gap-5 overflow-y-auto">
-        {/* Provider selection */}
-        <div>
-          <label
-            className="block text-xs font-semibold uppercase tracking-wider mb-2"
+      {/* Provider grid */}
+      <div className="flex-1 overflow-y-auto">
+        {loading ? (
+          <div
+            className="flex items-center justify-center py-12 gap-2"
             style={{ color: 'var(--color-text-tertiary)' }}
           >
-            Provider
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            {PROVIDERS.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => {
-                  setProviderId(p.id);
-                  setError('');
-                }}
-                className="flex flex-col items-start gap-1 p-3 rounded-xl text-left transition-all"
-                style={{
-                  background:
-                    providerId === p.id
-                      ? 'color-mix(in srgb, var(--color-accent) 10%, var(--color-surface))'
+            <Loader2 size={16} className="animate-spin" />
+            <span className="text-sm">Loading providers...</span>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            {CLOUD_PROVIDERS.filter((p) => p.id !== 'custom').map((provider) => {
+              const status = providerStatus.find((s) => s.id === provider.id);
+              const isConfigured = status?.configured || false;
+              const modelCount = status?.modelCount || 0;
+
+              return (
+                <button
+                  key={provider.id}
+                  onClick={() => handleProviderClick(provider.id)}
+                  className="flex flex-col items-start gap-3 p-4 rounded-xl text-left transition-all"
+                  style={{
+                    background: isConfigured
+                      ? 'color-mix(in srgb, var(--color-success) 8%, var(--color-surface))'
                       : 'var(--color-surface)',
-                  border:
-                    providerId === p.id
-                      ? '1.5px solid var(--color-accent)'
+                    border: isConfigured
+                      ? '1.5px solid var(--color-success)'
                       : '1.5px solid var(--color-border)',
-                  cursor: 'pointer',
-                }}
-              >
-                <span
-                  className="text-sm font-semibold"
-                  style={{ color: 'var(--color-text)' }}
+                    cursor: 'pointer',
+                  }}
                 >
-                  {p.name}
-                </span>
-                <span
-                  className="text-[10px] leading-tight"
-                  style={{ color: 'var(--color-text-tertiary)' }}
-                >
-                  {p.modelExample}
-                </span>
-              </button>
-            ))}
+                  {/* Icon & Status */}
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-2xl">{provider.icon}</span>
+                    {isConfigured ? (
+                      <CheckCircle2 size={18} style={{ color: 'var(--color-success)' }} />
+                    ) : (
+                      <div
+                        className="w-5 h-5 rounded-full border-2"
+                        style={{ borderColor: 'var(--color-text-tertiary)' }}
+                      />
+                    )}
+                  </div>
+
+                  {/* Name & Status */}
+                  <div className="w-full">
+                    <div
+                      className="text-sm font-semibold"
+                      style={{ color: 'var(--color-text)' }}
+                    >
+                      {provider.name}
+                    </div>
+                    <div
+                      className="text-xs mt-0.5"
+                      style={{
+                        color: isConfigured
+                          ? 'var(--color-success)'
+                          : 'var(--color-text-tertiary)',
+                      }}
+                    >
+                      {isConfigured
+                        ? `${modelCount} models available`
+                        : 'Not configured'}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="pt-4 border-t" style={{ borderColor: 'var(--color-border)' }}>
+        <button
+          onClick={handleFinish}
+          className="w-full py-3 px-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all"
+          style={{
+            background: 'var(--color-accent)',
+            color: 'var(--color-on-accent)',
+          }}
+        >
+          <CheckCircle2 size={16} />
+          Finish Setup
+          {configuredCount > 0 && (
+            <span
+              className="text-xs px-1.5 py-0.5 rounded"
+              style={{ background: 'rgba(255,255,255,0.2)' }}
+            >
+              {configuredCount} configured
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => {
+            updateSettings({ inferenceMode: 'cloud' });
+            onComplete();
+          }}
+          className="w-full mt-2 py-2 text-xs transition-colors"
+          style={{ color: 'var(--color-text-tertiary)', cursor: 'pointer' }}
+        >
+          Skip for now — configure later in Settings
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ConfigureProviderView
+// ---------------------------------------------------------------------------
+
+function ConfigureProviderView({
+  providerId,
+  onBack,
+  onConfigured,
+}: {
+  providerId: string;
+  onBack: () => void;
+  onConfigured: () => void;
+}) {
+  const provider = CLOUD_PROVIDERS.find((p) => p.id === providerId);
+  if (!provider) return null;
+
+  const [apiKey, setApiKey] = useState('');
+  const [baseUrl, setBaseUrl] = useState(provider.defaultBaseUrl || '');
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<TestResult | null>(null);
+  const [error, setError] = useState('');
+
+  const handleTest = async () => {
+    if (!apiKey.trim()) {
+      setError('API key is required');
+      return;
+    }
+
+    setTesting(true);
+    setError('');
+    setTestResult(null);
+
+    const result = await testProvider(providerId, apiKey.trim(), baseUrl.trim() || undefined);
+    setTestResult(result);
+    setTesting(false);
+  };
+
+  const handleSave = async () => {
+    if (!apiKey.trim()) {
+      setError('API key is required');
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+
+    const result = await configureProvider(
+      providerId,
+      apiKey.trim(),
+      baseUrl.trim() || undefined
+    );
+
+    if (result.success) {
+      onConfigured();
+    } else {
+      setError(result.message);
+      setSaving(false);
+    }
+  };
+
+  const canSave = apiKey.trim().length > 0 && testResult?.success;
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="mb-6">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1.5 text-xs mb-3 transition-colors"
+          style={{ color: 'var(--color-text-secondary)' }}
+        >
+          <ArrowLeft size={12} />
+          Back to providers
+        </button>
+
+        <div className="flex items-center gap-3">
+          <span className="text-3xl">{provider.icon}</span>
+          <div>
+            <h2 className="text-xl font-bold" style={{ color: 'var(--color-text)' }}>
+              Configure {provider.name}
+            </h2>
+            <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+              Enter your API key to enable {provider.name} models
+            </p>
           </div>
         </div>
+      </div>
 
+      <div className="flex-1 flex flex-col gap-5">
         {/* API Key */}
         <div>
           <label
@@ -234,6 +302,7 @@ export function CloudOnboarding({
           >
             <Key size={11} />
             API Key
+            <span style={{ color: 'var(--color-error)' }}>*</span>
           </label>
           <div className="relative">
             <input
@@ -242,20 +311,15 @@ export function CloudOnboarding({
               onChange={(e) => {
                 setApiKey(e.target.value);
                 setError('');
+                setTestResult(null);
               }}
-              placeholder={selectedProvider.keyPlaceholder}
+              placeholder={provider.apiKeyPlaceholder}
               autoComplete="off"
               className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
               style={{
                 background: 'var(--color-surface)',
                 border: '1.5px solid var(--color-border)',
                 color: 'var(--color-text)',
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = 'var(--color-accent)';
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'var(--color-border)';
               }}
             />
             {apiKey && (
@@ -272,21 +336,22 @@ export function CloudOnboarding({
             )}
           </div>
 
-          {selectedProvider.docsUrl && (
+          {provider.docsUrl && (
             <a
-              href={selectedProvider.docsUrl}
+              href={provider.docsUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 mt-2 text-xs font-medium transition-colors"
               style={{ color: 'var(--color-accent)' }}
             >
-              {selectedProvider.docsLabel}
+              {provider.docsLabel}
+              <ExternalLink size={10} />
             </a>
           )}
         </div>
 
-        {/* Custom base URL */}
-        {isCustom && (
+        {/* Base URL (optional for most, required for custom) */}
+        {(providerId === 'custom' || baseUrl) && (
           <div>
             <label
               className="flex items-center gap-1.5 block text-xs font-semibold uppercase tracking-wider mb-2"
@@ -294,31 +359,89 @@ export function CloudOnboarding({
             >
               <Globe size={11} />
               Base URL
+              {providerId === 'custom' && <span style={{ color: 'var(--color-error)' }}>*</span>}
             </label>
             <input
               type="text"
-              value={customBaseUrl}
-              onChange={(e) => {
-                setCustomBaseUrl(e.target.value);
-                setError('');
-              }}
-              placeholder="https://api.openai.com/v1"
+              value={baseUrl}
+              onChange={(e) => setBaseUrl(e.target.value)}
+              placeholder={provider.defaultBaseUrl || 'https://api.example.com/v1'}
               className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
               style={{
                 background: 'var(--color-surface)',
                 border: '1.5px solid var(--color-border)',
                 color: 'var(--color-text)',
               }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = 'var(--color-accent)';
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'var(--color-border)';
-              }}
             />
-            <p className="text-xs mt-1.5" style={{ color: 'var(--color-text-tertiary)' }}>
-              The full OpenAI-compatible endpoint URL (must end with /v1).
-            </p>
+            {providerId === 'custom' && (
+              <p className="text-xs mt-1" style={{ color: 'var(--color-text-tertiary)' }}>
+                The full OpenAI-compatible endpoint URL
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Test Button */}
+        <button
+          onClick={handleTest}
+          disabled={!apiKey.trim() || testing}
+          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
+          style={{
+            background: 'var(--color-bg-tertiary)',
+            color: 'var(--color-text)',
+            cursor: apiKey.trim() && !testing ? 'pointer' : 'not-allowed',
+            opacity: testing ? 0.7 : 1,
+          }}
+        >
+          {testing ? (
+            <>
+              <Loader2 size={14} className="animate-spin" />
+              Testing connection...
+            </>
+          ) : (
+            <>
+              <RefreshCw size={14} />
+              Test Connection
+            </>
+          )}
+        </button>
+
+        {/* Test Result */}
+        {testResult && (
+          <div
+            className="flex items-start gap-2 px-4 py-3 rounded-xl text-sm"
+            style={{
+              background: testResult.success
+                ? 'color-mix(in srgb, var(--color-success) 10%, transparent)'
+                : 'color-mix(in srgb, var(--color-error) 10%, transparent)',
+              border: `1px solid color-mix(in srgb, ${
+                testResult.success ? 'var(--color-success)' : 'var(--color-error)'
+              } 20%, transparent)`,
+              color: testResult.success ? 'var(--color-success)' : 'var(--color-error)',
+            }}
+          >
+            {testResult.success ? (
+              <CheckCircle2 size={16} className="shrink-0 mt-0.5" />
+            ) : (
+              <XCircle size={16} className="shrink-0 mt-0.5" />
+            )}
+            <div>
+              {testResult.success ? (
+                <div>
+                  <span className="font-medium">Connection successful!</span>
+                  <span className="ml-2 text-xs opacity-80">
+                    ({testResult.models.length} models available)
+                  </span>
+                </div>
+              ) : (
+                <div>
+                  <span className="font-medium">Connection failed</span>
+                  {testResult.error && (
+                    <p className="text-xs mt-1 opacity-80">{testResult.error}</p>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -337,7 +460,7 @@ export function CloudOnboarding({
           </div>
         )}
 
-        {/* Info note */}
+        {/* Privacy note */}
         <div
           className="px-4 py-3 rounded-xl text-xs"
           style={{
@@ -345,20 +468,21 @@ export function CloudOnboarding({
             color: 'var(--color-text-tertiary)',
           }}
         >
-          🔒 Your API key is stored locally in your browser and never sent to our servers. It's only used to communicate directly with your chosen provider.
+          🔒 Your API key is stored locally and encrypted. It's only used to
+          communicate directly with {provider.name}.
         </div>
       </div>
 
       {/* Footer */}
       <div className="pt-4 border-t" style={{ borderColor: 'var(--color-border)' }}>
         <button
-          onClick={handleFinish}
-          disabled={!canFinish || saving}
+          onClick={handleSave}
+          disabled={!canSave || saving}
           className="w-full py-3 px-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all"
           style={{
-            background: canFinish && !saving ? 'var(--color-accent)' : 'var(--color-bg-tertiary)',
-            color: canFinish && !saving ? 'var(--color-on-accent)' : 'var(--color-text-tertiary)',
-            cursor: canFinish && !saving ? 'pointer' : 'not-allowed',
+            background: canSave && !saving ? 'var(--color-success)' : 'var(--color-bg-tertiary)',
+            color: canSave && !saving ? 'white' : 'var(--color-text-tertiary)',
+            cursor: canSave && !saving ? 'pointer' : 'not-allowed',
             opacity: saving ? 0.7 : 1,
           }}
         >
@@ -370,21 +494,9 @@ export function CloudOnboarding({
           ) : (
             <>
               <CheckCircle2 size={16} />
-              Finish Setup
+              Save & Continue
             </>
           )}
-        </button>
-
-        {/* Skip option */}
-        <button
-          onClick={() => {
-            updateSettings({ inferenceMode: 'cloud' });
-            onComplete();
-          }}
-          className="w-full mt-2 py-2 text-xs transition-colors"
-          style={{ color: 'var(--color-text-tertiary)', cursor: 'pointer' }}
-        >
-          Skip for now — configure later in Settings
         </button>
       </div>
     </div>

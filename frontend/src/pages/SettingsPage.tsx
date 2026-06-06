@@ -753,12 +753,12 @@ export function SettingsPage() {
               </p>
               <div className="flex gap-3 mt-3 text-xs">
                 <a
-                  href="https://scalingintelligence.stanford.edu/blogs/freya/"
+                  href="https://scalingintelligence.stanford.edu/blogs/openjarvis/"
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{ color: 'var(--color-accent)' }}
                 >
-                  Project site
+                  OpenJarvis Project Site
                 </a>
                 <a
                   href="https://willtanoe.github.io/freya/"

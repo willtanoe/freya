@@ -992,4 +992,166 @@ async def security_scan():
     }
 
 
+# ---------------------------------------------------------------------------
+# Cloud Provider Configuration & Model Discovery
+# ---------------------------------------------------------------------------
+
+
+@router.get("/v1/models/available")
+async def list_available_models(request: Request):
+    """Return only models that are configured (have API keys).
+
+    This is the primary endpoint for the frontend model picker.
+    Returns models grouped by provider.
+    """
+    from freya.engine.cloud import CloudEngine
+
+    cloud = CloudEngine()
+    available = cloud.list_available_models()
+
+    return {
+        "providers": [
+            {"id": provider_id, "models": models}
+            for provider_id, models in available.items()
+            if models  # Only include providers with configured models
+        ]
+    }
+
+
+@router.get("/v1/providers/status")
+async def get_providers_status():
+    """Return status of all configured cloud providers.
+
+    Returns configured status and model count for each provider.
+    """
+    from freya.engine.cloud import CloudEngine
+
+    cloud = CloudEngine()
+    status = cloud.get_provider_status()
+
+    return {"providers": status}
+
+
+@router.post("/v1/providers/configure")
+async def configure_provider(request: Request):
+    """Configure a cloud provider with API key.
+
+    Saves to ~/.freya/cloud-keys.env and triggers engine reload.
+    """
+    body = await request.json()
+    provider_id = body.get("provider_id", "")
+    api_key = body.get("api_key", "")
+    base_url = body.get("base_url", "")
+
+    if not provider_id or not api_key:
+        raise HTTPException(status_code=400, detail="provider_id and api_key are required")
+
+    # Map provider_id to env var name
+    env_var_map = {
+        "openai": "OPENAI_API_KEY",
+        "anthropic": "ANTHROPIC_API_KEY",
+        "google": "GEMINI_API_KEY",
+        "openrouter": "OPENROUTER_API_KEY",
+        "deepseek": "DEEPSEEK_API_KEY",
+        "groq": "GROQ_API_KEY",
+        "custom": "CUSTOM_API_KEY",
+    }
+
+    env_var = env_var_map.get(provider_id)
+    if not env_var:
+        raise HTTPException(status_code=400, detail=f"Unknown provider: {provider_id}")
+
+    # Save to ~/.freya/cloud-keys.env
+    import os
+    from pathlib import Path
+
+    keys_dir = Path.home() / ".freya"
+    keys_dir.mkdir(exist_ok=True)
+    keys_file = keys_dir / "cloud-keys.env"
+
+    # Read existing
+    existing = {}
+    if keys_file.exists():
+        for line in keys_file.read_text().splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                existing[k.strip()] = v.strip()
+
+    # Update with new values
+    existing[env_var] = api_key
+    if base_url and provider_id == "custom":
+        existing["OPENAI_BASE_URL"] = base_url
+    elif base_url:
+        existing[f"{env_var}_BASE_URL"] = base_url
+
+    # Write back
+    lines = [f"{k}={v}" for k, v in existing.items()]
+    keys_file.write_text("\n".join(lines) + "\n")
+
+    # Trigger engine reload by updating app state
+    try:
+        from freya.engine.cloud import CloudEngine
+        from freya.engine.multi import MultiEngine
+
+        engine = request.app.state.engine
+        engine_name = getattr(request.app.state, "engine_name", "")
+
+        # Create new CloudEngine with updated keys
+        cloud = CloudEngine()
+
+        # If current engine is MultiEngine, replace the cloud part
+        if hasattr(engine, "_engines"):
+            new_engines = []
+            for key, eng in engine._engines:
+                if key == "cloud":
+                    new_engines.append((key, cloud))
+                else:
+                    new_engines.append((key, eng))
+            request.app.state.engine = MultiEngine(new_engines)
+        else:
+            # Wrap in MultiEngine
+            request.app.state.engine = MultiEngine([(engine_name, engine), ("cloud", cloud)])
+            request.app.state.engine_name = "multi"
+
+    except Exception as e:
+        # Non-fatal: the saved keys will be picked up on next server restart
+        pass
+
+    return {"success": True, "message": f"{provider_id} configured successfully"}
+
+
+@router.post("/v1/providers/test")
+async def test_provider(request: Request):
+    """Test connection to a cloud provider.
+
+    Returns success status and list of available models.
+    """
+    body = await request.json()
+    provider_id = body.get("provider_id", "")
+    api_key = body.get("api_key", "")
+    base_url = body.get("base_url", "")
+
+    if not provider_id:
+        raise HTTPException(status_code=400, detail="provider_id is required")
+
+    from freya.engine.cloud import CloudEngine
+
+    try:
+        cloud = CloudEngine()
+        models = cloud.test_provider(provider_id, api_key, base_url or None)
+        return {
+            "success": True,
+            "provider_id": provider_id,
+            "models": models,
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "provider_id": provider_id,
+            "models": [],
+            "error": str(e),
+        }
+
+
 __all__ = ["router"]

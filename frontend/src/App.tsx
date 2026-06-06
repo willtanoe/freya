@@ -19,10 +19,11 @@ import { track, hashId } from './lib/analytics';
 import { OnboardingFlow } from './components/setup/OnboardingFlow';
 
 export default function App() {
-  // Onboarding is done when: non-Tauri, or localStorage flag is set, or Settings has inferenceMode.
+  // Onboarding is done when: Settings has inferenceMode OR old localStorage flag set.
+  // This ensures onboarding shows on first launch regardless of Tauri vs browser dev.
   const settings = useAppStore((s) => s.settings);
   const [setupDone, setSetupDone] = useState(
-    !isTauri() || !!settings.inferenceMode || !!localStorage.getItem('oj-setup-completed'),
+    !!settings.inferenceMode || !!localStorage.getItem('oj-setup-completed'),
   );
   const [showSetupScreen, setShowSetupScreen] = useState(false);
 
@@ -135,13 +136,13 @@ export default function App() {
     return () => clearInterval(interval);
   }, [optInEnabled, optInDisplayName, optInAnonId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Show opt-in modal on first visit
+  // Show opt-in modal on first visit — only after onboarding is complete
   useEffect(() => {
-    if (!optInModalSeen) {
+    if (setupDone && !showSetupScreen && !optInModalSeen) {
       setOptInModalOpen(true);
       markOptInModalSeen();
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [setupDone, showSetupScreen, optInModalSeen]);
 
   // Fire model_changed when the user switches models. First mount is
   // not a "change" — only emit when both prev and current are real and
