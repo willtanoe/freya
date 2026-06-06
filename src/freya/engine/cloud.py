@@ -1443,7 +1443,23 @@ class CloudEngine(InferenceEngine):
         if self._google_client is not None:
             models.extend(_GOOGLE_MODELS)
         if self._openrouter_client is not None:
-            models.extend(_OPENROUTER_POPULAR)
+            try:
+                import httpx
+                # Use the client's base_url and api_key to fetch models
+                base = str(self._openrouter_client.base_url)
+                api_key = self._openrouter_client.api_key
+                resp = httpx.get(
+                    f"{base}/models",
+                    headers={"Authorization": f"Bearer {api_key}"},
+                    timeout=15,
+                )
+                if resp.is_success:
+                    for m in resp.json().get("data", []):
+                        models.append(f"openrouter/{m['id']}")
+                else:
+                    models.extend(_OPENROUTER_POPULAR)
+            except Exception:
+                models.extend(_OPENROUTER_POPULAR)
         if self._minimax_client is not None:
             models.extend(_MINIMAX_MODELS)
         if self._codex_client is not None:
