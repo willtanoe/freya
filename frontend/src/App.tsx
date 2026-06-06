@@ -11,14 +11,12 @@ import { LogsPage } from './pages/LogsPage';
 import { CommandPalette } from './components/CommandPalette';
 import { Toaster } from './components/ui/sonner';
 import { useAppStore } from './lib/store';
-import { fetchModels, fetchServerInfo, fetchSavings, submitSavings, isTauri } from './lib/api';
-import { OptInModal } from './components/OptInModal';
+import { fetchModels, fetchServerInfo, isTauri } from './lib/api';
 import { UpdateChecker } from './components/Desktop/UpdateChecker';
 import { track, hashId } from './lib/analytics';
 import { OnboardingFlow } from './components/setup/OnboardingFlow';
 
 export default function App() {
-  // Onboarding shown on first launch when no setup completed flag exists
   const [setupDone, setSetupDone] = useState(
     !!localStorage.getItem('freya-setup-completed'),
   );
@@ -35,19 +33,11 @@ export default function App() {
   const setSelectedModel = useAppStore((s) => s.setSelectedModel);
   const selectedModel = useAppStore((s) => s.selectedModel);
   const setServerInfo = useAppStore((s) => s.setServerInfo);
-  const setSavings = useAppStore((s) => s.setSavings);
   const commandPaletteOpen = useAppStore((s) => s.commandPaletteOpen);
   const setCommandPaletteOpen = useAppStore((s) => s.setCommandPaletteOpen);
-  const optInEnabled = useAppStore((s) => s.optInEnabled);
-  const optInDisplayName = useAppStore((s) => s.optInDisplayName);
-  const optInEmail = useAppStore((s) => s.optInEmail);
-  const optInAnonId = useAppStore((s) => s.optInAnonId);
-  const optInModalSeen = useAppStore((s) => s.optInModalSeen);
-  const optInModalOpen = useAppStore((s) => s.optInModalOpen);
-  const setOptInModalOpen = useAppStore((s) => s.setOptInModalOpen);
-  const markOptInModalSeen = useAppStore((s) => s.markOptInModalSeen);
+  const settings = useAppStore((s) => s.settings);
 
-  // Apply theme class to <html>
+  // Apply theme
   useEffect(() => {
     const root = document.documentElement;
     root.classList.remove('dark', 'light');
@@ -55,7 +45,7 @@ export default function App() {
     else if (settings.theme === 'light') root.classList.add('light');
   }, [settings.theme]);
 
-  // Sync overlay conversations into the main app
+  // Sync overlay conversations (Tauri only)
   const importOverlay = useAppStore((s) => s.importOverlayConversation);
   useEffect(() => {
     if (!isTauri()) return;
@@ -74,91 +64,35 @@ export default function App() {
       })
       .catch(() => setModels([]))
       .finally(() => setModelsLoading(false));
-  }, [setupDone]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [setupDone]);
 
   // Fetch server info
   useEffect(() => {
     if (!setupDone) return;
     fetchServerInfo().then(setServerInfo).catch(() => {});
-  }, [setupDone]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [setupDone]);
 
-  // Poll savings and optionally share to Supabase
-  useEffect(() => {
-    if (!setupDone) return;
-    const refresh = () =>
-      fetchSavings()
-        .then((data) => {
-          setSavings(data);
-          if (optInEnabled && optInDisplayName && data) {
-            const claudeEntry = data.per_provider.find(
-              (p) => p.provider === 'claude-opus-4.6',
-            );
-            const dollarSavings = claudeEntry ? claudeEntry.total_cost : 0;
-            const energySaved = data.per_provider.reduce(
-              (sum, p) => sum + (p.energy_wh || 0),
-              0,
-            );
-            const flopsSaved = data.per_provider.reduce(
-              (sum, p) => sum + (p.flops || 0),
-              0,
-            );
-            submitSavings({
-              anon_id: optInAnonId,
-              display_name: optInDisplayName,
-              email: optInEmail,
-              total_calls: data.total_calls,
-              total_tokens: data.total_tokens,
-              dollar_savings: dollarSavings,
-              energy_wh_saved: energySaved,
-              flops_saved: flopsSaved,
-              token_counting_version: data.token_counting_version ?? 1,
-            });
-          }
-        })
-        .catch(() => {});
-    refresh();
-    const interval = setInterval(refresh, 30000);
-    return () => clearInterval(interval);
-  }, [setupDone, optInEnabled, optInDisplayName, optInAnonId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Show opt-in modal on first visit — only after onboarding is complete
-  useEffect(() => {
-    if (setupDone && !optInModalSeen) {
-      setOptInModalOpen(true);
-      markOptInModalSeen();
-    }
-  }, [setupDone, optInModalSeen]);
-
-  // Fire model_changed when the user switches models
+  // Model changed tracking
   useEffect(() => {
     const prev = prevModelRef.current;
     const curr = selectedModel || '';
     prevModelRef.current = curr;
     if (!prev || !curr || prev === curr) return;
     void (async () => {
-      const [fromHash, toHash] = await Promise.all([
-        hashId(prev),
-        hashId(curr),
-      ]);
-      track('model_changed', {
-        from_model_hash: fromHash,
-        to_model_hash: toHash,
-      });
+      const [fromHash, toHash] = await Promise.all([hashId(prev), hashId(curr)]);
+      track('model_changed', { from_model_hash: fromHash, to_model_hash: toHash });
     })();
   }, [selectedModel]);
 
-  // app_opened — one-shot per app launch
+  // App opened event
   useEffect(() => {
-    const t = setTimeout(() => {
-      track('app_opened', {});
-    }, 500);
+    const t = setTimeout(() => track('app_opened', {}), 500);
     return () => clearTimeout(t);
   }, []);
 
   const toggleSystemPanel = useAppStore((s) => s.toggleSystemPanel);
-  const settings = useAppStore((s) => s.settings);
 
-  // Global keyboard shortcuts
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -174,7 +108,6 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [commandPaletteOpen, setCommandPaletteOpen, toggleSystemPanel]);
 
-  // Show onboarding on first launch
   if (!setupDone) {
     return <OnboardingFlow onComplete={handleOnboardingComplete} />;
   }
@@ -195,9 +128,6 @@ export default function App() {
       </Routes>
       <Toaster position="bottom-right" />
       {commandPaletteOpen && <CommandPalette />}
-      {optInModalOpen && (
-        <OptInModal onClose={() => setOptInModalOpen(false)} />
-      )}
     </>
   );
 }
