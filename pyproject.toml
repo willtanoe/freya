@@ -14,7 +14,8 @@ readme = "README.md"
 requires-python = ">=3.10,<3.14"
 license = {text = "Apache-2.0"}
 authors = [
-    {name = "Freya Contributors"},
+    {name = "The OpenJarvis Authors"},
+    {name = "Willtanoe"},
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",

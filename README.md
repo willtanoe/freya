@@ -172,4 +172,4 @@ Freya is part of [Intelligence Per Watt](https://www.intelligence-per-watt.ai/),
 
 ---
 
-*Freya is a community fork of [Freya](https://github.com/freya/Freya). We are grateful to the original authors for their foundational work.*
+*Freya is a community fork of [OpenJarvis](https://github.com/open-jarvis/OpenJarvis) by [Willtanoe](https://github.com/willtanoe). We are grateful to the original OpenJarvis authors for their foundational work.*
