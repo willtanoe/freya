@@ -35,9 +35,9 @@
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
-      "icons/icon.icns",
-      "icons/icon.ico",
-      "icons/icon.png"
+      "icons/logo.ico",
+      "icons/logo.ico",
+      "icons/logo.ico"
     ],
     "category": "Utility",
     "shortDescription": "Cloud-first AI assistant — connect your API keys and chat",

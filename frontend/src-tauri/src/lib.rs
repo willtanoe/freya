@@ -6,172 +6,43 @@ use tauri::Manager;
 use tauri_plugin_autostart::MacosLauncher;
 use tokio::sync::Mutex;
 
-const OLLAMA_PORT: u16 = 11434;
 const FREYA_PORT: u16 = 8000;
 
-/// Small, fast model pulled at startup so the app opens quickly.
-const STARTUP_MODEL: &str = "qwen3.5:4b";
+/// Default cloud model — user configures via UI on first launch.
+const DEFAULT_MODEL: &str = "gpt-4o-mini";
 
-/// Tiny fallback model if even the startup model can't be pulled.
-const FALLBACK_MODEL: &str = "qwen3:0.6b";
+/// Cloud-first config written to ~/.freya/config.toml on first boot.
+const CLOUD_CONFIG: &str = r#"[engine]
+default = "cloud"
 
-/// Qwen3.5 model variants, ordered smallest to largest.
-/// Each entry is (ollama_tag, approximate_download_size_gb, min_ram_gb).
-const QWEN35_MODELS: &[(&str, f64, f64)] = &[
-    ("qwen3.5:0.8b", 1.0, 4.0),
-    ("qwen3.5:2b", 2.7, 6.0),
-    ("qwen3.5:4b", 3.4, 8.0),
-    ("qwen3.5:9b", 6.6, 12.0),
-    ("qwen3.5:27b", 17.0, 24.0),
-    ("qwen3.5:35b", 24.0, 32.0),
-    ("qwen3.5:122b", 81.0, 96.0),
-];
+[intelligence]
+default_model = "gpt-4o-mini"
+provider = "openai"
 
-/// Get total system RAM in GB.
-fn total_ram_gb() -> f64 {
-    #[cfg(target_os = "macos")]
-    {
-        use std::process::Command;
-        if let Ok(output) = Command::new("sysctl").args(["-n", "hw.memsize"]).output() {
-            if let Ok(s) = String::from_utf8(output.stdout) {
-                if let Ok(bytes) = s.trim().parse::<u64>() {
-                    return bytes as f64 / (1024.0 * 1024.0 * 1024.0);
-                }
-            }
-        }
-    }
-    #[cfg(target_os = "linux")]
-    {
-        if let Ok(contents) = std::fs::read_to_string("/proc/meminfo") {
-            for line in contents.lines() {
-                if line.starts_with("MemTotal:") {
-                    if let Some(kb_str) = line.split_whitespace().nth(1) {
-                        if let Ok(kb) = kb_str.parse::<u64>() {
-                            return kb as f64 / (1024.0 * 1024.0);
-                        }
-                    }
-                }
-            }
-        }
-    }
-    #[cfg(target_os = "windows")]
-    {
-        use std::process::Command;
-        // wmic returns TotalVisibleMemorySize in KB
-        if let Ok(output) = Command::new("wmic")
-            .args(["OS", "get", "TotalVisibleMemorySize", "/value"])
-            .output()
-        {
-            if let Ok(s) = String::from_utf8(output.stdout) {
-                for line in s.lines() {
-                    if let Some(val) = line.strip_prefix("TotalVisibleMemorySize=") {
-                        if let Ok(kb) = val.trim().parse::<u64>() {
-                            return kb as f64 / (1024.0 * 1024.0);
-                        }
-                    }
-                }
-            }
-        }
-    }
-    8.0
-}
+[agent]
+default_agent = "operative"
 
-/// Return the Qwen3.5 models that fit in `ram_gb`, smallest first.
-fn models_that_fit_in(ram_gb: f64) -> Vec<&'static str> {
-    QWEN35_MODELS
-        .iter()
-        .filter(|(_, _, min_ram)| ram_gb >= *min_ram)
-        .map(|(tag, _, _)| *tag)
-        .collect()
-}
+[tools]
+enabled = ["code_interpreter", "web_search", "file_read", "file_write", "shell_exec", "git_tool", "think"]
+"#;
 
-/// The default local model: the second-largest Qwen3.5 model that fits in
-/// `ram_gb`. Falls back to the only fitting model, or FALLBACK_MODEL if none
-/// fit. Deliberately NOT the largest — leaves RAM headroom for the OS/app.
-fn default_local_model(ram_gb: f64) -> &'static str {
-    let fitting = models_that_fit_in(ram_gb);
-    match fitting.len() {
-        0 => FALLBACK_MODEL,
-        1 => fitting[0],
-        n => fitting[n - 2],
-    }
-}
-
-/// A resolved boot plan derived purely from the inference config + RAM.
-/// Pure and side-effect-free so it can be unit-tested without spawning
-/// processes or touching the network.
+/// Cloud-first boot plan — no local model management.
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct BootPlan {
-    /// Whether to start and wait for the bundled Ollama.
-    launch_ollama: bool,
-    /// The single Ollama model to pull (None for custom endpoints).
-    model_to_pull: Option<String>,
-    /// Optional `(engine_key, bare_host)` override for a custom endpoint,
-    /// e.g. `("lmstudio", "http://localhost:1234")`. Written into
-    /// ~/.freya/config.toml so `freya serve` picks it up.
-    engine_host: Option<(String, String)>,
-    /// Args appended after `uv run freya serve --port <port>`.
     serve_args: Vec<String>,
 }
 
-/// Default OpenAI-compatible engine key used when a custom endpoint config
-/// omits one (LM Studio is the canonical local server).
-const CUSTOM_FALLBACK_ENGINE: &str = "lmstudio";
-
-/// Decide what to launch/pull/serve from the inference config + system RAM.
-/// Pure: no I/O, no spawning.
-fn boot_plan(cfg: &InferenceConfig, ram_gb: f64) -> BootPlan {
-    match cfg.kind {
-        SourceKind::Ollama => {
-            let model = cfg
-                .model
-                .clone()
-                .unwrap_or_else(|| default_local_model(ram_gb).to_string());
-            BootPlan {
-                launch_ollama: true,
-                model_to_pull: Some(model.clone()),
-                engine_host: None,
-                serve_args: vec![
-                    "--engine".into(),
-                    "ollama".into(),
-                    "--model".into(),
-                    model,
-                    "--agent".into(),
-                    "simple".into(),
-                ],
-            }
-        }
-        SourceKind::Custom => {
-            let engine = cfg
-                .engine
-                .clone()
-                .unwrap_or_else(|| CUSTOM_FALLBACK_ENGINE.to_string());
-            // Record (engine_key, bare_host) only when a host is configured, so
-            // boot can write `[engine.<key>] host = ...` into config.toml. An
-            // empty host is dropped (no override).
-            let engine_host = cfg
-                .host
-                .clone()
-                .filter(|h| !h.is_empty())
-                .map(|h| (engine.clone(), h));
-            // `model` may be empty if the config is malformed; `freya serve`
-            // surfaces a clear error then (there is no universal default model
-            // for an arbitrary endpoint).
-            let model = cfg.model.clone().unwrap_or_default();
-            BootPlan {
-                launch_ollama: false,
-                model_to_pull: None,
-                engine_host,
-                serve_args: vec![
-                    "--engine".into(),
-                    engine,
-                    "--model".into(),
-                    model,
-                    "--agent".into(),
-                    "simple".into(),
-                ],
-            }
-        }
+/// Always returns a cloud boot plan. No Ollama, no RAM detection.
+fn boot_plan() -> BootPlan {
+    BootPlan {
+        serve_args: vec![
+            "--engine".into(),
+            "cloud".into(),
+            "--model".into(),
+            DEFAULT_MODEL.into(),
+            "--agent".into(),
+            "operative".into(),
+        ],
     }
 }
 
@@ -416,7 +287,7 @@ struct SetupStatus {
     server_ready: bool,
     model_ready: bool,
     error: Option<String>,
-    /// "ollama" | "custom" — lets the setup UI relabel the progress steps.
+    /// "cloud" | "custom" — lets the setup UI relabel the progress steps.
     source: String,
 }
 
@@ -429,7 +300,7 @@ impl Default for SetupStatus {
             server_ready: false,
             model_ready: false,
             error: None,
-            source: "ollama".into(),
+            source: "cloud".into(),
         }
     }
 }
@@ -608,7 +479,7 @@ async fn wait_for_freya_health(
 }
 
 async fn ollama_has_model(model: &str) -> bool {
-    let url = format!("http://127.0.0.1:{}/api/tags", OLLAMA_PORT);
+    let url = format!("http://127.0.0.1:{}/api/tags", FREYA_PORT);
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(5))
         .build()
@@ -633,7 +504,7 @@ async fn ollama_has_model(model: &str) -> bool {
 }
 
 async fn pull_model(model: &str) -> Result<(), String> {
-    let url = format!("http://127.0.0.1:{}/api/pull", OLLAMA_PORT);
+    let url = format!("http://127.0.0.1:{}/api/pull", FREYA_PORT);
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(600))
         .build()
@@ -739,156 +610,40 @@ fn format_uv_sync_spawn_error(root: &std::path::Path, uv_bin: &str, err: &str) -
 // ---------------------------------------------------------------------------
 
 async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
-    // Decide the inference source (default Ollama) before launching anything.
-    let cfg = read_inference_config();
-    let plan = boot_plan(&cfg, total_ram_gb());
+    // Cloud-first: write config and start server directly — no local model management.
+    let plan = boot_plan();
+
     {
         let mut s = status.lock().await;
-        s.source = match cfg.kind {
-            SourceKind::Ollama => "ollama",
-            SourceKind::Custom => "custom",
-        }
-        .into();
+        s.source = "cloud".into();
+        s.phase = "server".into();
+        s.detail = "Writing cloud config...".into();
     }
 
-    // For the Ollama path, the model pull may fall back to FALLBACK_MODEL; we
-    // record what is actually available here so the serve command below uses
-    // it instead of the originally-planned tag. None on the custom path.
-    let mut serve_model_override: Option<String> = None;
-
-    if plan.launch_ollama {
-        // Phase 1: Start Ollama
-        {
+    // Write cloud config to ~/.freya/
+    let freya_dir = std::path::PathBuf::from(home_dir()).join(".freya");
+    if let Err(e) = std::fs::create_dir_all(&freya_dir) {
+        let mut s = status.lock().await;
+        s.error = Some(format!("Could not create ~/.freya/: {}", e));
+        return;
+    }
+    let config_path = freya_dir.join("config.toml");
+    if !config_path.exists() {
+        if let Err(e) = std::fs::write(&config_path, CLOUD_CONFIG) {
             let mut s = status.lock().await;
-            s.phase = "ollama".into();
-            s.detail = "Starting inference engine...".into();
-        }
-
-        // Try the bundled sidecar first, fall back to system ollama
-        let ollama_child = {
-            let ollama_bin = resolve_bin("ollama");
-            let mut sidecar_cmd = tokio::process::Command::new(&ollama_bin);
-            sidecar_cmd
-                .arg("serve")
-                .env("OLLAMA_HOST", format!("127.0.0.1:{}", OLLAMA_PORT))
-                .stdout(std::process::Stdio::null())
-                .stderr(std::process::Stdio::null());
-            // Avoid LD_LIBRARY_PATH leak when running inside an AppImage (#455).
-            prepare_subprocess_for_appimage(&mut sidecar_cmd);
-            match sidecar_cmd.spawn() {
-                Ok(child) => Some(child),
-                Err(_) => None,
-            }
-        };
-
-        if let Some(child) = ollama_child {
-            backend.lock().await.ollama = Some(ChildHandle { child });
-        }
-
-        let ollama_url = format!("http://127.0.0.1:{}/api/tags", OLLAMA_PORT);
-        if !wait_for_url(&ollama_url, Duration::from_secs(30)).await {
-            let mut s = status.lock().await;
-            s.error = Some("Could not start Ollama. Install it from https://ollama.com".into());
+            s.error = Some(format!("Could not write config: {}", e));
             return;
-        }
-
-        {
-            let mut s = status.lock().await;
-            s.ollama_ready = true;
-            s.detail = "Inference engine ready.".into();
-        }
-
-        // Phase 2: Pull the single default model (see default_local_model /
-        // boot_plan). We deliberately do NOT pull any others.
-        let model = plan
-            .model_to_pull
-            .clone()
-            .unwrap_or_else(|| STARTUP_MODEL.to_string());
-        {
-            let mut s = status.lock().await;
-            s.phase = "model".into();
-            s.detail = format!("Checking for {}...", model);
-        }
-
-        if !ollama_has_model(&model).await {
-            {
-                let mut s = status.lock().await;
-                s.detail = format!("Downloading {}... (this may take a minute)", model);
-            }
-            if let Err(e) = pull_model(&model).await {
-                // If the chosen model fails, try the tiny fallback
-                eprintln!("Warning: failed to pull {}: {}", model, e);
-                if !ollama_has_model(FALLBACK_MODEL).await {
-                    {
-                        let mut s = status.lock().await;
-                        s.detail = format!("Downloading {}...", FALLBACK_MODEL);
-                    }
-                    if let Err(e2) = pull_model(FALLBACK_MODEL).await {
-                        let mut s = status.lock().await;
-                        s.error = Some(format!("Failed to download model: {}", e2));
-                        return;
-                    }
-                }
-            }
-        }
-
-        // The pull may have fallen back to FALLBACK_MODEL; serve and persist
-        // whatever is actually available now, not the originally-planned tag.
-        let resolved_model = if ollama_has_model(&model).await {
-            model
-        } else {
-            FALLBACK_MODEL.to_string()
-        };
-        serve_model_override = Some(resolved_model.clone());
-
-        // Persist the resolved model so Settings shows it and future boots reuse it.
-        let mut persisted = cfg.clone();
-        persisted.model = Some(resolved_model);
-        let _ = write_inference_config(&persisted);
-
-        {
-            let mut s = status.lock().await;
-            s.model_ready = true;
-            s.detail = "Model ready.".into();
-        }
-    } else {
-        // Custom OpenAI-compatible endpoint: never start Ollama, never download.
-        let host = plan
-            .engine_host
-            .as_ref()
-            .map(|(_, v)| v.clone())
-            .unwrap_or_default();
-        {
-            let mut s = status.lock().await;
-            s.phase = "model".into();
-            s.detail = format!("Connecting to {}...", host);
-        }
-        if host.is_empty() || !endpoint_reachable(&host, Duration::from_secs(15)).await {
-            let mut s = status.lock().await;
-            s.error = Some(format!(
-                "Could not reach your custom inference server at {}. \
-                 Start the server (e.g. LM Studio) and check the URL in Settings, then relaunch.",
-                if host.is_empty() { "(no URL set)" } else { host.as_str() }
-            ));
-            return;
-        }
-        // Point `freya serve` at the user's endpoint by writing the engine
-        // host into ~/.freya/config.toml (the env var alone is shadowed by
-        // the engine's non-empty default host in the Python layer).
-        if let Some((engine, host)) = &plan.engine_host {
-            if let Err(e) = set_engine_host_in_config(engine, host) {
-                let mut s = status.lock().await;
-                s.error = Some(format!("Could not write engine config: {}", e));
-                return;
-            }
-        }
-        {
-            let mut s = status.lock().await;
-            s.ollama_ready = true;
-            s.model_ready = true;
-            s.detail = "Connected to custom endpoint.".into();
         }
     }
+
+    {
+        let mut s = status.lock().await;
+        s.ollama_ready = true; // reused field — means "pre-flight ok"
+        s.model_ready = true;
+        s.detail = "Cloud config ready.".into();
+    }
+
+    let serve_model_override: Option<String> = None;
 
     // Phase 3: Start freya serve
     {
@@ -1732,7 +1487,7 @@ async fn set_inference_source(
     api_key: Option<String>,
 ) -> Result<(), String> {
     let kind = match kind.as_str() {
-        "ollama" => SourceKind::Ollama,
+        "cloud" => SourceKind::Ollama,
         "custom" => SourceKind::Custom,
         other => return Err(format!("Unknown inference source kind: {:?}", other)),
     };
@@ -1753,7 +1508,7 @@ async fn set_inference_source(
             let engine = cfg
                 .engine
                 .clone()
-                .unwrap_or_else(|| CUSTOM_FALLBACK_ENGINE.to_string());
+                .unwrap_or_else(|| "cloud".to_string());
             let key_name = format!("{}_API_KEY", engine.to_ascii_uppercase());
             // Save the key before persisting the config: if the key can't be
             // written, surface it and DON'T record a custom source whose
@@ -1778,7 +1533,7 @@ async fn pull_ollama_model(model_name: String) -> Result<serde_json::Value, Stri
 /// Delete a model from Ollama.
 #[tauri::command]
 async fn delete_ollama_model(model_name: String) -> Result<serde_json::Value, String> {
-    let url = format!("http://127.0.0.1:{}/api/delete", OLLAMA_PORT);
+    let url = format!("http://127.0.0.1:{}/api/delete", FREYA_PORT);
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(30))
         .build()
@@ -2514,7 +2269,7 @@ mod tests {
         // QWEN35_MODELS min_ram ladder: 4,6,8,12,24,32,96 GB
         assert_eq!(default_local_model(4.0), "qwen3.5:0.8b");  // only one fits
         assert_eq!(default_local_model(8.0), "qwen3.5:2b");    // fits 0.8/2/4 → 2nd-largest
-        assert_eq!(default_local_model(16.0), "qwen3.5:4b");   // fits ..9b → 2nd-largest
+        assert_eq!(default_local_model(16.0), "gpt-4o-mini");   // fits ..9b → 2nd-largest
         assert_eq!(default_local_model(32.0), "qwen3.5:27b");  // fits 0.8/2/4/9/27/35b → 2nd-largest is 27b
         assert_eq!(default_local_model(128.0), "qwen3.5:35b"); // fits all → 2nd-largest
     }
@@ -2554,10 +2309,10 @@ mod tests {
         let cfg = InferenceConfig { kind: SourceKind::Ollama, ..Default::default() };
         let plan = boot_plan(&cfg, 16.0);
         assert!(plan.launch_ollama);
-        assert_eq!(plan.model_to_pull.as_deref(), Some("qwen3.5:4b"));
+        assert_eq!(plan.model_to_pull.as_deref(), Some("gpt-4o-mini"));
         assert!(plan.engine_host.is_none());
-        assert!(plan.serve_args.windows(2).any(|w| w == ["--engine", "ollama"]));
-        assert!(plan.serve_args.windows(2).any(|w| w == ["--model", "qwen3.5:4b"]));
+        assert!(plan.serve_args.windows(2).any(|w| w == ["--engine", "cloud"]));
+        assert!(plan.serve_args.windows(2).any(|w| w == ["--model", "gpt-4o-mini"]));
     }
 
     #[test]
