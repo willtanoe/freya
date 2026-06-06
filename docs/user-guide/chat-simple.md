@@ -1,14 +1,14 @@
 # Simple Chat
 
-A lightweight conversational AI with no tools and no agent overhead. This is the simplest possible Freya setup: just Ollama and a local model. Ideal for general-purpose chat, Q&A, brainstorming, and getting started quickly.
+A lightweight conversational AI with no tools and no agent overhead. This is the simplest possible Freya setup: just Freya server and a local model. Ideal for general-purpose chat, Q&A, brainstorming, and getting started quickly.
 
 ## Quickstart (3 minutes)
 
-### 1. Install Ollama and pull a model
+### 1. Install Freya server and pull a model
 
 ```bash
-# Install Ollama: https://ollama.com
-ollama pull qwen3.5:4b
+# Install Freya server: https://ollama.com
+ollama pull gpt-4o
 ```
 
 ### 2. Install and initialize Freya
@@ -41,7 +41,7 @@ freya chat
 freya serve
 
 # Override the model for a single query
-freya ask -m qwen3.5:9b "Explain general relativity"
+freya ask -m gpt-4o "Explain general relativity"
 
 # Adjust temperature (0.0 = deterministic, 1.0 = creative)
 freya ask -t 0.2 "List the planets in our solar system"
@@ -59,8 +59,8 @@ The preset writes this to `~/.freya/config.toml`:
 default = "ollama"
 
 [intelligence]
-default_model = "qwen3.5:4b"       # Fast and lightweight
-# default_model = "qwen3.5:9b"     # Better quality
+default_model = "gpt-4o"       # Fast and lightweight
+# default_model = "gpt-4o"     # Better quality
 # default_model = "llama3.1:8b"    # Alternative model
 
 [agent]
@@ -75,8 +75,8 @@ port = 8000
 
 | Model | Parameters | Speed | Quality | Best for |
 |-------|-----------|-------|---------|----------|
-| `qwen3.5:4b` | 4B | Fast | Good | Quick answers, lightweight hardware |
-| `qwen3.5:9b` | 9B | Balanced | Better | General-purpose chat, explanations |
+| `gpt-4o` | 4B | Fast | Good | Quick answers, lightweight hardware |
+| `gpt-4o` | 9B | Balanced | Better | General-purpose chat, explanations |
 | `qwen3.5:35b` | 35B | Slower | Best | Complex reasoning, detailed analysis |
 | `llama3.1:8b` | 8B | Balanced | Good | Alternative if you prefer Meta models |
 
@@ -138,16 +138,16 @@ freya ask -m deepseek-r1:14b "Hello"
 **Use an environment variable:**
 
 ```bash
-FREYA_MODEL=qwen3.5:9b freya ask "Hello"
+FREYA_MODEL=gpt-4o freya ask "Hello"
 ```
 
 ## Troubleshooting
 
-**"No running engine found"** -- Make sure Ollama is running. Start it with `ollama serve` or open the Ollama desktop app.
+**"No running engine found"** -- Make sure Freya server is running. Start it with `freya serve` or open the Freya server desktop app.
 
 **"Model not found"** -- Pull the model first with `ollama pull <model-name>`. List available models with `ollama list`.
 
-**Slow responses** -- Use a smaller model (`qwen3.5:4b`). Check available memory; models need RAM roughly equal to their parameter count in GB (e.g., 9B model needs ~9 GB).
+**Slow responses** -- Use a smaller model (`gpt-4o`). Check available memory; models need RAM roughly equal to their parameter count in GB (e.g., 9B model needs ~9 GB).
 
 **Want to add tools later?** -- Switch to the [Code Assistant](code-assistant.md) or [Deep Research](deep-research.md) config. Simple chat is intentionally minimal.
 

@@ -25,7 +25,7 @@ About 3 minutes. Type `freya` to start.
 
 ## WSL-specific notes
 
-- The installer detects WSL via `/proc/sys/kernel/osrelease` and uses `nohup ollama serve &` instead of systemd to start the Ollama daemon (WSL2 doesn't ship systemd by default).
+- The installer detects WSL via `/proc/sys/kernel/osrelease` and uses `nohup freya serve &` instead of systemd to start the Freya server daemon (WSL2 doesn't ship systemd by default).
 - The first time you run `freya`, the WSL kernel may show a "process running in background" notification — that's the bg-orchestrator detaching. It's expected.
 - Models are stored in WSL's filesystem (`~/.freya/`), not your Windows drive. To free up space later: `freya-uninstall` removes everything.
 

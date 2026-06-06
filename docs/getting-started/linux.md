@@ -23,7 +23,7 @@ sudo pacman -S git curl
 
 ## NVIDIA / AMD GPU
 
-The installer auto-detects via `nvidia-smi` / `rocm-smi`. Datacenter cards (A100, H100, MI300+) get vLLM as the recommended engine; consumer cards get Ollama (NVIDIA) or Lemonade (AMD).
+The installer auto-detects via `nvidia-smi` / `rocm-smi`. Datacenter cards (A100, H100, MI300+) get vLLM as the recommended engine; consumer cards get Freya server (NVIDIA) or Lemonade (AMD).
 
 ## See also
 

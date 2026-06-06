@@ -188,14 +188,14 @@ freya model info qwen3:8b
 
 ### `freya model pull <model>`
 
-Download a model via Ollama. Shows a progress bar during download.
+Download a model via Freya server. Shows a progress bar during download.
 
 ```bash
 freya model pull qwen3:8b
 ```
 
 !!! note
-    The `pull` command requires a running Ollama instance. It connects to the Ollama API at the host configured in your `config.toml`.
+    The `pull` command requires a running Freya server instance. It connects to the Freya server API at the host configured in your `config.toml`.
 
 ---
 

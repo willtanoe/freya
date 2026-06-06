@@ -80,7 +80,7 @@ host = "http://localhost:30000"
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `host` | string | `http://localhost:11434` | Base URL for the Ollama API server. |
+| `host` | string | `http://localhost:11434` | Base URL for the Freya server API server. |
 
 **`[engine.vllm]`:**
 
@@ -997,7 +997,7 @@ from freya.core.config import (
     IntelligenceConfig,
     FreyaConfig,
     LearningConfig,
-    OllamaEngineConfig,
+    Freya serverEngineConfig,
     StorageConfig,
     ToolsConfig,
 )
@@ -1005,7 +1005,7 @@ from freya.core.config import (
 config = FreyaConfig(
     engine=EngineConfig(
         default="ollama",
-        ollama=OllamaEngineConfig(host="http://my-server:11434"),
+        ollama=Freya serverEngineConfig(host="http://my-server:11434"),
     ),
     intelligence=IntelligenceConfig(
         default_model="qwen3:8b",

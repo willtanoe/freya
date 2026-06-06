@@ -19,7 +19,7 @@ Freya is a modular AI assistant framework. Here's what developers build with it:
 === "Chat with Any Model"
 
     ```bash
-    freya ask "Explain quantum entanglement" -m qwen3.5:4b   # use qwen3.5:9b or larger on GPU
+    freya ask "Explain quantum entanglement" -m gpt-4o
     ```
 
 === "Agent + Tools"
@@ -120,7 +120,7 @@ freya init --digest
 This guide walks through the core workflows of Freya: the browser app, CLI, Python SDK, agents with tools, memory, benchmarks, and the API server.
 
 !!! info "Prerequisites"
-    Make sure you have [installed Freya](installation.md) and have at least one inference backend running (e.g., `ollama serve`).
+    Make sure you have [installed Freya](installation.md) and have at least one inference backend running (e.g., `freya serve`).
 
 ## Browser App
 
@@ -385,7 +385,7 @@ This produces a table showing each model, its engine, parameter count, context l
 freya model info qwen3:8b
 ```
 
-### Pull a Model (Ollama)
+### Pull a Model (Freya server)
 
 ```bash
 freya model pull qwen3:8b
@@ -545,7 +545,7 @@ for r in results:
     print(f"  [{r['score']:.3f}] {r['source']}")
 
 # 3. Ask a question (memory context is injected automatically)
-answer = j.ask("How do I configure the Ollama engine host?")
+answer = j.ask("How do I configure the Freya server engine host?")
 print(f"\nAnswer: {answer}")
 
 # 4. Use an agent with tools

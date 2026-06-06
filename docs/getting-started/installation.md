@@ -7,30 +7,29 @@ search:
 
 # Installation
 
-Freya runs entirely on your hardware. Choose the interface that fits your workflow.
+Freya is a cloud-first AI assistant. Connect your API keys and start chatting — no local GPU required.
 
 ---
 
 ## Browser App
 
-Run the full chat UI in your browser. Everything stays local — the backend runs on
-your machine and the frontend connects via `localhost`.
+Run the full chat UI in your browser. The backend runs locally and connects
+to cloud AI providers via your API keys.
 
 ### One-command setup
 
 ```bash
 git clone https://github.com/willtanoe/freya.git
-cd Freya
+cd freya
 ./scripts/quickstart.sh
 ```
 
-The script handles everything:
+The script handles:
 
 1. Checks for Python 3.10+ and Node.js 18+
-2. Installs Ollama if not present and pulls a starter model
-3. Installs Python and frontend dependencies
-4. Starts the backend API server and frontend dev server
-5. Opens `http://localhost:5173` in your browser
+2. Installs Python and frontend dependencies
+3. Starts the backend API server and frontend dev server
+4. Opens `http://localhost:5173` in your browser
 
 ### Manual setup
 

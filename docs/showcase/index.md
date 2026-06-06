@@ -28,14 +28,6 @@ These are stories from people who use Freya day to day. Each entry shows the **r
 
     [:octicons-arrow-right-24: See it](persistent-memory.md)
 
-- :material-piggy-bank-outline:{ .lg .middle } **Track Your Savings**
-
-    ---
-
-    A leaderboard that tells you exactly how much you saved by running locally — and reminds you that none of your prompts ever left your house.
-
-    [:octicons-arrow-right-24: See it](cost-savings.md)
-
 - :material-message-text:{ .lg .middle } **Discord Companion**
 
     ---
@@ -43,14 +35,6 @@ These are stories from people who use Freya day to day. Each entry shows the **r
     Freya answers questions in your private Discord while you sleep. Reads your notes, checks your calendar, schedules things, replies in your voice.
 
     [:octicons-arrow-right-24: See it](discord-companion.md)
-
-- :material-code-tags-check:{ .lg .middle } **Offline Code Reviewer**
-
-    ---
-
-    Review a pull request on a transatlantic flight. Freya reads the diff, the surrounding files, and the project conventions — without an internet connection.
-
-    [:octicons-arrow-right-24: See it](coding-assistant.md)
 
 </div>
 
