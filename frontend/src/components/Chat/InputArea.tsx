@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Send, Square, Paperclip, Search, Cpu } from 'lucide-react';
+import { Send, Square, Paperclip, Search, Cpu, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppStore, generateId } from '../../lib/store';
 import { streamChat, streamResearch } from '../../lib/sse';
@@ -74,6 +74,115 @@ function useResearchCorpusSync(enabled: boolean): {
   return state;
 }
 
+function ModelPickerButton() {
+  const selectedModel = useAppStore((s) => s.selectedModel);
+  const setSelectedModel = useAppStore((s) => s.setSelectedModel);
+  const modelLoading = useAppStore((s) => s.modelLoading);
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [models, setModels] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setLoading(true);
+    fetch(`${getBase()}/v1/models?include_cloud=1`)
+      .then((r) => r.json())
+      .then((d) => setModels((d.data || []).map((m: { id: string }) => m.id)))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [open]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    if (open) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const filtered = search
+    ? models.filter((m) => m.toLowerCase().includes(search.toLowerCase()))
+    : models;
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs transition-colors cursor-pointer"
+        style={{
+          background: 'transparent',
+          border: '1px solid var(--color-border)',
+          color: 'var(--color-text-tertiary)',
+        }}
+        title="Change model"
+      >
+        <Cpu size={12} />
+        <span className="max-w-[120px] truncate">
+          {modelLoading ? '...' : (selectedModel || 'Pick model')}
+        </span>
+        <ChevronDown size={10} />
+      </button>
+      {open && (
+        <div
+          className="absolute bottom-full left-0 mb-1 w-72 max-h-64 overflow-hidden rounded-lg border shadow-lg z-50 flex flex-col"
+          style={{
+            background: 'var(--color-surface)',
+            borderColor: 'var(--color-border)',
+          }}
+        >
+          <div className="p-2 border-b" style={{ borderColor: 'var(--color-border)' }}>
+            <input
+              autoFocus
+              type="text"
+              placeholder="Search models..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full px-2 py-1 text-xs rounded border outline-none"
+              style={{
+                background: 'var(--color-bg)',
+                borderColor: 'var(--color-border)',
+                color: 'var(--color-text)',
+              }}
+            />
+          </div>
+          <div className="overflow-y-auto flex-1">
+            {loading ? (
+              <div className="px-3 py-2 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>Loading...</div>
+            ) : filtered.length === 0 ? (
+              <div className="px-3 py-2 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>No models found</div>
+            ) : (
+              filtered.map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => { setSelectedModel(m); setOpen(false); }}
+                  className="w-full text-left px-3 py-1.5 text-xs transition-colors flex items-center gap-2"
+                  style={{
+                    color: m === selectedModel ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+                    background: m === selectedModel ? 'var(--color-accent-subtle)' : 'transparent',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (m !== selectedModel) (e.target as HTMLElement).style.background = 'var(--color-hover)';
+                  }}
+                  onMouseLeave={(e) => {
+                    if (m !== selectedModel) (e.target as HTMLElement).style.background = 'transparent';
+                  }}
+                >
+                  <Cpu size={11} />
+                  <span className="truncate">{m}</span>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function InputArea() {
   const [input, setInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -95,7 +204,6 @@ export function InputArea() {
   const modelLoading = useAppStore((s) => s.modelLoading);
   const deepResearch = useAppStore((s) => s.deepResearch);
   const setDeepResearch = useAppStore((s) => s.setDeepResearch);
-  const setCommandPaletteOpen = useAppStore((s) => s.setCommandPaletteOpen);
   const corpusSync = useResearchCorpusSync(deepResearch);
 
   const { state: speechState, available: speechAvailable, startRecording, stopRecording } = useSpeech();
@@ -551,21 +659,7 @@ export function InputArea() {
             <Search size={12} />
             Deep Research
           </button>
-          <button
-            type="button"
-            onClick={() => setCommandPaletteOpen(true)}
-            disabled={streamState.isStreaming}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs transition-colors cursor-pointer disabled:cursor-default disabled:opacity-50"
-            style={{
-              background: 'transparent',
-              border: '1px solid var(--color-border)',
-              color: 'var(--color-text-tertiary)',
-            }}
-            title="Change model"
-          >
-            <Cpu size={12} />
-            {modelLoading ? '...' : (selectedModel || 'Pick model')}
-          </button>
+          <ModelPickerButton />
         </div>
         {deepResearch && corpusSync.syncing && corpusSync.itemsSynced > 0 && (
           <div

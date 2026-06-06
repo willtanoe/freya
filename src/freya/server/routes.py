@@ -599,19 +599,22 @@ async def _handle_stream(
 
 @router.get("/v1/models")
 async def list_models(request: Request) -> ModelListResponse:
-    """List locally installed models (Ollama).
+    """List available models.
 
-    Cloud models are not included here — they live in the Cloud Models tab
-    of the UI and are selected there, not from this endpoint.
+    By default returns local Ollama models only.
+    Pass ?include_cloud=1 to also include cloud models (OpenRouter, etc).
     """
     from freya.server.cloud_router import is_cloud_model, list_local_models
 
-    # Prefer engine.list_models() so mock engines work in tests.
-    # Filter out any cloud model IDs that may appear via MultiEngine.
-    # Fall back to direct Ollama query only when the engine returns nothing.
     engine = request.app.state.engine
     all_ids = engine.list_models()
-    model_ids = [m for m in all_ids if not is_cloud_model(m)]
+
+    include_cloud = request.query_params.get("include_cloud") == "1"
+    if include_cloud:
+        model_ids = list(all_ids)
+    else:
+        model_ids = [m for m in all_ids if not is_cloud_model(m)]
+
     if not model_ids:
         model_ids = await list_local_models()
 
