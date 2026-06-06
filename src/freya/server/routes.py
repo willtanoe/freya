@@ -695,6 +695,54 @@ async def delete_model(model_name: str, request: Request):
     return {"status": "deleted", "model": model_name}
 
 
+@router.post("/v1/cloud/keys")
+async def save_cloud_keys(request: Request):
+    """Save cloud API keys to ~/.freya/cloud-keys.env and reload engine.
+
+    Accepts JSON body: {"keys": {"OPENAI_API_KEY": "sk-...", "OPENAI_BASE_URL": "https://..."}}
+    Keys not included in the body are left unchanged in the file.
+    """
+    from pathlib import Path
+    import os
+
+    body = await request.json()
+    new_keys: dict = body.get("keys", {})
+    if not isinstance(new_keys, dict):
+        raise HTTPException(status_code=400, detail="'keys' must be a dict")
+
+    keys_path = Path.home() / ".freya" / "cloud-keys.env"
+    keys_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Read existing keys
+    existing: dict = {}
+    if keys_path.exists():
+        for raw in keys_path.read_text().splitlines():
+            line = raw.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                existing[k.strip()] = v.strip()
+
+    # Merge new keys
+    existing.update(new_keys)
+
+    # Remove empty values
+    existing = {k: v for k, v in existing.items() if v}
+
+    # Write back
+    lines = [f"{k}={v}" for k, v in existing.items()]
+    keys_path.write_text("\n".join(lines) + "\n")
+
+    # Update running process env
+    for k, v in new_keys.items():
+        if v:
+            os.environ[k] = v
+        else:
+            os.environ.pop(k, None)
+
+    # Trigger engine reload
+    return await reload_cloud_engine(request)
+
+
 @router.post("/v1/cloud/reload")
 async def reload_cloud_engine(request: Request):
     """Hot-reload cloud API keys and (re-)initialize the cloud engine.

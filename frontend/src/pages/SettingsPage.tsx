@@ -44,7 +44,7 @@ function OllamaModelList() {
   );
 }
 
-function ApiKeyInput({ storageKey, placeholder }: { storageKey: string; placeholder: string }) {
+function ApiKeyInput({ storageKey, placeholder, envKey }: { storageKey: string; placeholder: string; envKey?: string }) {
   const [value, setValue] = useState(() => {
     try { return localStorage.getItem(storageKey) || ''; } catch { return ''; }
   });
@@ -52,6 +52,16 @@ function ApiKeyInput({ storageKey, placeholder }: { storageKey: string; placehol
   const save = (v: string) => {
     setValue(v);
     try { if (v) localStorage.setItem(storageKey, v); else localStorage.removeItem(storageKey); } catch {}
+    // Sync to backend
+    if (envKey) {
+      try {
+        fetch('/v1/cloud/keys', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ keys: { [envKey]: v || '' } }),
+        });
+      } catch {}
+    }
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
@@ -435,16 +445,45 @@ export function SettingsPage() {
           {/* API Keys */}
           <Section title="API Keys">
             <SettingRow label="OpenAI" description="GPT-4, GPT-3.5, etc.">
-              <ApiKeyInput storageKey="freya-openai-key" placeholder="sk-..." />
+              <ApiKeyInput storageKey="freya-openai-key" placeholder="sk-..." envKey="OPENAI_API_KEY" />
             </SettingRow>
             <SettingRow label="Anthropic" description="Claude models">
-              <ApiKeyInput storageKey="freya-anthropic-key" placeholder="sk-ant-..." />
+              <ApiKeyInput storageKey="freya-anthropic-key" placeholder="sk-ant-..." envKey="ANTHROPIC_API_KEY" />
             </SettingRow>
             <SettingRow label="Google" description="Gemini models">
-              <ApiKeyInput storageKey="freya-gemini-key" placeholder="AI..." />
+              <ApiKeyInput storageKey="freya-gemini-key" placeholder="AI..." envKey="GEMINI_API_KEY" />
             </SettingRow>
             <SettingRow label="OpenRouter" description="Multi-provider routing">
-              <ApiKeyInput storageKey="freya-openrouter-key" placeholder="sk-or-..." />
+              <ApiKeyInput storageKey="freya-openrouter-key" placeholder="sk-or-..." envKey="OPENROUTER_API_KEY" />
+            </SettingRow>
+            <SettingRow label="Custom" description="OpenAI-compatible API (DeepSeek, Groq, xAI, local)">
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] w-14" style={{ color: 'var(--color-text-tertiary)' }}>Base URL</span>
+                  <input
+                    type="text"
+                    placeholder="https://api.deepseek.com"
+                    className="w-56 px-2 py-1 rounded text-xs"
+                    style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+                    defaultValue={(() => { try { return localStorage.getItem('freya-custom-base-url') || ''; } catch { return ''; } })()}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      try { if (v) localStorage.setItem('freya-custom-base-url', v); else localStorage.removeItem('freya-custom-base-url'); } catch {}
+                      try {
+                        fetch('/v1/cloud/keys', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ keys: { OPENAI_BASE_URL: v || '' } }),
+                        });
+                      } catch {}
+                    }}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] w-14" style={{ color: 'var(--color-text-tertiary)' }}>API Key</span>
+                  <ApiKeyInput storageKey="freya-custom-key" placeholder="sk-..." envKey="OPENAI_API_KEY" />
+                </div>
+              </div>
             </SettingRow>
           </Section>
 
