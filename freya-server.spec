@@ -1,12 +1,29 @@
 # -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_all
+
+datas = [('src/freya', 'freya')]
+binaries = [('src/freya_rust.pyd', '.')]
+hiddenimports = ['yaml', 'uvicorn', 'fastapi', 'openai', 'httpx', 'google.genai', 'anthropic']
+tmp_ret = collect_all('freya')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('yaml')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('tzdata')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('faster_whisper')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('ctranslate2')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('onnxruntime')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 
 a = Analysis(
     ['src\\freya\\server_standalone.py'],
     pathex=[],
-    binaries=[],
-    datas=[('src/freya', 'freya')],
-    hiddenimports=['uvicorn', 'fastapi', 'openai', 'httpx', 'google.genai', 'anthropic', 'freya.engine.cloud', 'freya.server.app', 'freya.server.routes', 'freya.server.api_routes', 'freya.server.cloud_router', 'freya.agents.operative', 'freya.tools.builtin', 'freya.tools.file_read', 'freya.tools.shell_exec', 'freya.tools.web_search', 'freya.tools.calculator', 'freya.speech.edge_tts', 'freya.speech.google_stt'],
+    binaries=binaries,
+    datas=datas,
+    hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
