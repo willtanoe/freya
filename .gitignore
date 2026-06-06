@@ -75,6 +75,7 @@ src/freya/server/static/
 
 # Desktop (Tauri)
 frontend/src-tauri/target/
+desktop/src-tauri/binaries/
 
 # Worktrees
 .worktrees/
