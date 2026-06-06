@@ -976,6 +976,7 @@ class CloudEngine(InferenceEngine):
             "messages": messages_to_dicts(messages),
             "max_tokens": max_tokens,
             "temperature": temperature,
+            **kwargs,
         }
         t0 = time.monotonic()
         resp = self._openrouter_client.chat.completions.create(**create_kwargs)
@@ -1067,6 +1068,7 @@ class CloudEngine(InferenceEngine):
             "messages": messages_to_dicts(messages),
             "max_tokens": max_tokens,
             "temperature": temperature,
+            **kwargs,
         }
         t0 = time.monotonic()
         resp = self._deepseek_client.chat.completions.create(**create_kwargs)
@@ -1106,6 +1108,7 @@ class CloudEngine(InferenceEngine):
             "messages": messages_to_dicts(messages),
             "max_tokens": max_tokens,
             "temperature": temperature,
+            **kwargs,
         }
         t0 = time.monotonic()
         resp = self._groq_client.chat.completions.create(**create_kwargs)
