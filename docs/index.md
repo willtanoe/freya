@@ -1,13 +1,13 @@
 ---
 title: Freya
-description: Personal AI, On Personal Devices
+description: Cloud AI, Simplified
 search:
   boost: 2
 hide:
   - navigation
 ---
 
-# Personal AI, On Personal Devices
+# Cloud AI, Simplified
 
 !!! info "Community Fork"
     Freya is a community fork of **[OpenJarvis](https://github.com/open-jarvis/OpenJarvis)** — a research project from the [Scaling Intelligence Lab](https://scalingintelligence.stanford.edu/) at Stanford SAIL, developed at [Hazy Research](https://hazyresearch.stanford.edu/) as part of [Intelligence Per Watt](https://www.intelligence-per-watt.ai/).
@@ -19,8 +19,9 @@ hide:
     Fork maintained by **[Willtanoe](https://github.com/willtanoe)**.
 
 <p class="hero-tagline">
-Freya is a research framework for composable, on-device AI systems.
-Build personal AI that runs on your hardware. Cloud APIs are optional.
+Freya is a cloud-first AI assistant. Connect your OpenAI, Anthropic, DeepSeek,
+Groq, or OpenRouter API keys and start chatting — no local GPU required.
+Models are fetched dynamically from each provider's API.
 </p>
 
 <div class="grid cards" markdown>
@@ -211,7 +212,7 @@ Freya is built around five composable layers. Each has a clean interface and can
     ---
 
     Docker, systemd, launchd. GPU-accelerated container images.
-
+
 
     ---
 
