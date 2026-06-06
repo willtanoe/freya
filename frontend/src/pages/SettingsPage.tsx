@@ -290,7 +290,13 @@ export function SettingsPage() {
           {/* Tools */}
           <Section title="Tools">
             <SettingRow label="Web Search" description="SerpAPI or Tavily key for web search tool">
-              <ApiKeyInput storageKey="freya-search-key" placeholder="API key..." />
+              <input type="password" placeholder="API key..."
+                className="w-48 px-2 py-1 rounded text-xs"
+                onChange={(e) => {
+                  try { localStorage.setItem('freya-search-key', e.target.value); } catch {}
+                }}
+                defaultValue={(() => { try { return localStorage.getItem('freya-search-key') || ''; } catch { return ''; } })()}
+                style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }} />
             </SettingRow>
           </Section>
 
