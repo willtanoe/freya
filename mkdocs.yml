@@ -127,7 +127,6 @@ markdown_extensions:
   - pymdownx.tilde
 
 extra_javascript:
-  - javascripts/leaderboard.js
   - https://cdn.jsdelivr.net/npm/@docsearch/js@3
   - javascripts/docsearch-init.js
 
@@ -157,7 +156,6 @@ nav:
       - Track Your Savings: showcase/cost-savings.md
       - Discord Companion: showcase/discord-companion.md
       - Offline Code Reviewer: showcase/coding-assistant.md
-      - Contributing: showcase/CONTRIBUTING.md
   - Tutorials:
       - Overview: tutorials/index.md
       - Deep Research Assistant: tutorials/deep-research.md
@@ -177,9 +175,6 @@ nav:
   - API Reference: api-reference/
   - User Guide:
       - CLI: user-guide/cli.md
-      - Pearl CLI: user-guide/pearl.md
-      - Pearl Mining: user-guide/mining.md
-      - Pearl Mining on Apple Silicon: user-guide/mining-apple-silicon.md
       - Python SDK: user-guide/python-sdk.md
       - Morning Digest: user-guide/morning-digest.md
       - Deep Research: user-guide/deep-research.md
@@ -194,9 +189,3 @@ nav:
       - Scheduler: user-guide/scheduler.md
       - Telemetry: user-guide/telemetry.md
       - Security: user-guide/security.md
-      - LLM-guided spec search: user-guide/llm-guided-spec-search.md
-  - Leaderboard: leaderboard.md
-  - Roadmap: development/roadmap.md
-  - Development:
-      - Mining: development/mining.md
-      - Pearl Model Enablement: development/pearl-model-enablement.md
