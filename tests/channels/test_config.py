@@ -5,7 +5,7 @@ from __future__ import annotations
 import textwrap
 from pathlib import Path
 
-from openjarvis.core.config import ChannelConfig, JarvisConfig, load_config
+from freya.core.config import ChannelConfig, FreyaConfig, load_config
 
 
 class TestChannelConfigDefaults:
@@ -23,14 +23,14 @@ class TestChannelConfigDefaults:
         assert cfg.default_agent == "orchestrator"
 
 
-class TestChannelConfigInJarvisConfig:
-    def test_channel_config_in_jarvis_config(self) -> None:
-        cfg = JarvisConfig()
+class TestChannelConfigInFreyaConfig:
+    def test_channel_config_in_freya_config(self) -> None:
+        cfg = FreyaConfig()
         assert hasattr(cfg, "channel")
         assert isinstance(cfg.channel, ChannelConfig)
 
-    def test_jarvis_config_channel_defaults(self) -> None:
-        cfg = JarvisConfig()
+    def test_freya_config_channel_defaults(self) -> None:
+        cfg = FreyaConfig()
         assert cfg.channel.enabled is False
         assert cfg.channel.default_channel == ""
 

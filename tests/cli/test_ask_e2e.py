@@ -1,4 +1,4 @@
-"""End-to-end tests for ``jarvis ask``."""
+"""End-to-end tests for ``freya ask``."""
 
 from __future__ import annotations
 
@@ -9,11 +9,11 @@ from unittest import mock
 
 from click.testing import CliRunner
 
-from openjarvis.cli import cli
-from openjarvis.core.config import JarvisConfig
+from freya.cli import cli
+from freya.core.config import FreyaConfig
 
 # Import the actual module (not the Click command attribute)
-_ask_mod = importlib.import_module("openjarvis.cli.ask")
+_ask_mod = importlib.import_module("freya.cli.ask")
 
 
 def _mock_engine_response():
@@ -33,15 +33,15 @@ def _mock_engine_response():
 def _patch_ask(monkeypatch, tmp_path, *, engine_result=None, no_engine=False):
     """Set up common mocks for ask tests."""
     # Re-register SimpleAgent after the autouse `_clean_registries` conftest
-    # fixture clears it. ``JarvisConfig().agent.default_agent`` defaults to
-    # ``"simple"``, so ``jarvis ask "..."`` (no --agent) routes through it.
-    from openjarvis.agents.simple import SimpleAgent
-    from openjarvis.core.registry import AgentRegistry
+    # fixture clears it. ``FreyaConfig().agent.default_agent`` defaults to
+    # ``"simple"``, so ``freya ask "..."`` (no --agent) routes through it.
+    from freya.agents.simple import SimpleAgent
+    from freya.core.registry import AgentRegistry
 
     if not AgentRegistry.contains("simple"):
         AgentRegistry.register_value("simple", SimpleAgent)
 
-    cfg = JarvisConfig()
+    cfg = FreyaConfig()
     cfg.telemetry.db_path = str(tmp_path / "telemetry.db")
 
     monkeypatch.setattr(_ask_mod, "load_config", lambda: cfg)

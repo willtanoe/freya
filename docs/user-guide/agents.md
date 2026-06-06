@@ -1,6 +1,6 @@
 # Agents
 
-Agents are the agentic logic layer of OpenJarvis. They determine how a query is processed -- whether it goes directly to a model, through a tool-calling loop, via ReAct reasoning, CodeAct code execution, recursive decomposition, or an external agent runtime. All agents implement the `BaseAgent` ABC and are registered via the `AgentRegistry`.
+Agents are the agentic logic layer of Freya. They determine how a query is processed -- whether it goes directly to a model, through a tool-calling loop, via ReAct reasoning, CodeAct code execution, recursive decomposition, or an external agent runtime. All agents implement the `BaseAgent` ABC and are registered via the `AgentRegistry`.
 
 ## Overview
 
@@ -25,7 +25,7 @@ All agents extend the abstract `BaseAgent` class.
 
 ```python
 from abc import ABC, abstractmethod
-from openjarvis.agents._stubs import AgentContext, AgentResult
+from freya.agents._stubs import AgentContext, AgentResult
 
 class BaseAgent(ABC):
     agent_id: str
@@ -166,7 +166,7 @@ The `NativeReActAgent` implements a **Thought-Action-Observation** loop followin
 **When to use:** For queries that benefit from explicit step-by-step reasoning with tool use, where you want visibility into the agent's thought process.
 
 !!! note "Backward compatibility"
-    The registry alias `"react"` maps to `NativeReActAgent`. The old import `from openjarvis.agents.react import ReActAgent` also still works.
+    The registry alias `"react"` maps to `NativeReActAgent`. The old import `from freya.agents.react import ReActAgent` also still works.
 
 ---
 
@@ -267,33 +267,33 @@ The `OpenHandsAgent` wraps the real `openhands-sdk` package for AI-driven softwa
 
 ```bash
 # Simple agent
-jarvis ask --agent simple "What is the capital of France?"
+freya ask --agent simple "What is the capital of France?"
 
 # Orchestrator with tools
-jarvis ask --agent orchestrator --tools calculator,think "What is sqrt(256)?"
+freya ask --agent orchestrator --tools calculator,think "What is sqrt(256)?"
 
 # NativeReActAgent
-jarvis ask --agent native_react --tools calculator "What is 2+2?"
+freya ask --agent native_react --tools calculator "What is 2+2?"
 
 # ReAct alias (same as native_react)
-jarvis ask --agent react --tools calculator,think "Solve step by step: 15% of 340"
+freya ask --agent react --tools calculator,think "Solve step by step: 15% of 340"
 
 # NativeOpenHandsAgent
-jarvis ask --agent native_openhands --tools calculator,web_search "Summarize example.com"
+freya ask --agent native_openhands --tools calculator,web_search "Summarize example.com"
 
 # RLMAgent
-jarvis ask --agent rlm "Summarize this long document"
+freya ask --agent rlm "Summarize this long document"
 
 # OpenHands SDK agent
-jarvis ask --agent openhands "Fix the bug in test_utils.py"
+freya ask --agent openhands "Fix the bug in test_utils.py"
 ```
 
 ### Via Python SDK
 
 ```python
-from openjarvis import Jarvis
+from freya import Freya
 
-j = Jarvis()
+j = Freya()
 
 # Simple agent
 response = j.ask("Hello", agent="simple")
@@ -332,14 +332,14 @@ j.close()
 The `ClaudeCodeAgent` wraps the `@anthropic-ai/claude-code` SDK via a bundled Node.js subprocess bridge. Unlike the other agents, inference is handled entirely by the Claude Agent SDK -- the `engine` parameter is accepted only for `BaseAgent` interface conformance and is not used.
 
 !!! warning "Requirements"
-    Requires Node.js 22+ on `PATH` and an `ANTHROPIC_API_KEY` environment variable (or pass `api_key=` directly). The bundled runner is auto-installed to `~/.openjarvis/claude_code_runner/` on first use via `npm install`.
+    Requires Node.js 22+ on `PATH` and an `ANTHROPIC_API_KEY` environment variable (or pass `api_key=` directly). The bundled runner is auto-installed to `~/.freya/claude_code_runner/` on first use via `npm install`.
 
 **How it works:**
 
-1. On first call, copies the bundled `claude_code_runner/` to `~/.openjarvis/claude_code_runner/` and runs `npm install --production` if `node_modules` is missing.
+1. On first call, copies the bundled `claude_code_runner/` to `~/.freya/claude_code_runner/` and runs `npm install --production` if `node_modules` is missing.
 2. Builds a JSON request payload (prompt, API key, workspace, allowed tools, system prompt, session ID) and sends it to `stdin` of a `node dist/index.js` subprocess.
 3. The Node.js runner calls the Claude Agent SDK and writes sentinel-delimited JSON to `stdout`.
-4. The Python side parses the output between `---OPENJARVIS_OUTPUT_START---` and `---OPENJARVIS_OUTPUT_END---` markers, extracting content, tool results, and metadata.
+4. The Python side parses the output between `---FREYA_OUTPUT_START---` and `---FREYA_OUTPUT_END---` markers, extracting content, tool results, and metadata.
 5. Returns an `AgentResult` with `turns=1`.
 
 **Constructor parameters:**
@@ -358,10 +358,10 @@ The `ClaudeCodeAgent` wraps the `@anthropic-ai/claude-code` SDK via a bundled No
 | `system_prompt`  | `str`             | `""`                | Additional system prompt for the agent           |
 | `timeout`        | `int`             | `300`               | Subprocess timeout in seconds                    |
 
-**When to use:** For software engineering tasks where the Claude Agent SDK's built-in tools (code editing, bash execution, file operations) provide capabilities beyond what OpenJarvis tool-calling agents support.
+**When to use:** For software engineering tasks where the Claude Agent SDK's built-in tools (code editing, bash execution, file operations) provide capabilities beyond what Freya tool-calling agents support.
 
 ```python
-from openjarvis.agents.claude_code import ClaudeCodeAgent
+from freya.agents.claude_code import ClaudeCodeAgent
 
 agent = ClaudeCodeAgent(
     engine=None,          # not used
@@ -376,24 +376,24 @@ print(result.content)
 
 ```bash
 # Via CLI
-jarvis ask --agent claude_code "Refactor the tests to use pytest fixtures"
+freya ask --agent claude_code "Refactor the tests to use pytest fixtures"
 ```
 
 !!! info "accepts_tools = False"
-    `ClaudeCodeAgent` does not accept OpenJarvis tools via `--tools`. Tool access for the Claude agent is configured separately via the `allowed_tools` constructor parameter, which passes tool names understood by the Claude Agent SDK itself.
+    `ClaudeCodeAgent` does not accept Freya tools via `--tools`. Tool access for the Claude agent is configured separately via the `allowed_tools` constructor parameter, which passes tool names understood by the Claude Agent SDK itself.
 
 ---
 
 ## OpenCodeAgent
 
-The `OpenCodeAgent` delegates coding tasks to [opencode](https://opencode.ai), the open-source coding agent, running it **on your local engine**. opencode handles the agentic loop, file edits, and tool use; OpenJarvis supplies the model — keeping coding-agent work local-first.
+The `OpenCodeAgent` delegates coding tasks to [opencode](https://opencode.ai), the open-source coding agent, running it **on your local engine**. opencode handles the agentic loop, file edits, and tool use; Freya supplies the model — keeping coding-agent work local-first.
 
 !!! warning "Requirements"
-    Requires the `opencode` binary on `PATH` (`npm i -g opencode-ai` or `brew install anomalyco/tap/opencode`). It is **not** bundled; `run()` returns a clear error if it is missing. No `ANTHROPIC_API_KEY` needed — inference goes through your OpenJarvis engine.
+    Requires the `opencode` binary on `PATH` (`npm i -g opencode-ai` or `brew install anomalyco/tap/opencode`). It is **not** bundled; `run()` returns a clear error if it is missing. No `ANTHROPIC_API_KEY` needed — inference goes through your Freya engine.
 
 **How it works:**
 
-1. Derives an OpenAI-compatible base URL from the `engine` (e.g. Ollama/vLLM/llama.cpp at `<host>/v1`) and writes an `opencode.json` in the workspace registering it as an `@ai-sdk/openai-compatible` provider (`openjarvis/<model>`).
+1. Derives an OpenAI-compatible base URL from the `engine` (e.g. Ollama/vLLM/llama.cpp at `<host>/v1`) and writes an `opencode.json` in the workspace registering it as an `@ai-sdk/openai-compatible` provider (`freya/<model>`).
 2. Spawns a headless `opencode serve` (loopback, random port) and waits for `/global/health`.
 3. Creates a session (`POST /session`) and sends the task (`POST /session/{id}/message`) with `model={providerID, modelID}` and the selected `agent` (`build` or `plan`).
 4. Parses the returned message `parts` — text parts → `content`, tool parts → `tool_results` — into an `AgentResult`.
@@ -408,13 +408,13 @@ The `OpenCodeAgent` delegates coding tasks to [opencode](https://opencode.ai), t
 | `workspace`         | `str`             | `os.getcwd()`    | Directory opencode operates in                           |
 | `agent`             | `str`             | `"build"`        | opencode agent: `build` (full access) or `plan` (read-only) |
 | `provider_base_url` | `str`             | derived          | Override the engine-derived OpenAI base URL              |
-| `provider_id`       | `str`             | `"openjarvis"`   | opencode provider id to register/use                     |
+| `provider_id`       | `str`             | `"freya"`   | opencode provider id to register/use                     |
 | `model_id`          | `str`             | `model`          | Model id within the provider                             |
 | `server_password`   | `str`             | `$OPENCODE_SERVER_PASSWORD` | Optional basic-auth for the opencode server   |
 | `timeout`           | `int`             | `600`            | HTTP timeout in seconds                                  |
 
 ```python
-from openjarvis.agents.opencode import OpenCodeAgent
+from freya.agents.opencode import OpenCodeAgent
 
 agent = OpenCodeAgent(engine, "qwen3:8b", workspace="/path/to/project", agent="build")
 result = agent.run("Add type hints to utils.py and run the tests")
@@ -424,7 +424,7 @@ agent.close()
 
 ```bash
 # Via CLI (opencode must be installed)
-jarvis ask --agent opencode "Refactor the parser to use a state machine"
+freya ask --agent opencode "Refactor the parser to use a state machine"
 ```
 
 !!! tip "Pass-through providers"
@@ -474,7 +474,7 @@ The `OperativeAgent` is a persistent, scheduled autonomous agent with built-in s
 **When to use:** For autonomous agents that run on a schedule (e.g., via `TaskScheduler`) and need to maintain state between invocations. The agent automatically manages session history and state persistence across ticks.
 
 ```python
-from openjarvis.agents.operative import OperativeAgent
+from freya.agents.operative import OperativeAgent
 
 agent = OperativeAgent(
     engine,
@@ -490,7 +490,7 @@ result = agent.run("Generate today's report")
 
 ```bash
 # Via CLI
-jarvis ask --agent operative "Check system status"
+freya ask --agent operative "Check system status"
 ```
 
 ---
@@ -541,7 +541,7 @@ The `MonitorOperativeAgent` is a long-horizon agent with four configurable strat
 **When to use:** For long-horizon benchmark evaluation and complex multi-step tasks that benefit from configurable strategies for memory management, context compression, and task decomposition. Particularly useful for benchmarks like GAIA, FRAMES, and LifelongAgent where strategy selection impacts performance.
 
 ```python
-from openjarvis.agents.monitor_operative import MonitorOperativeAgent
+from freya.agents.monitor_operative import MonitorOperativeAgent
 
 agent = MonitorOperativeAgent(
     engine,
@@ -560,7 +560,7 @@ result = agent.run("Investigate the root cause of the production outage")
 
 ```bash
 # Via CLI
-jarvis ask --agent monitor_operative "Analyze the security audit findings"
+freya ask --agent monitor_operative "Analyze the security audit findings"
 ```
 
 ---
@@ -592,13 +592,13 @@ See also the [`ContainerRunner`](#containerrunner) reference below, which manage
 | `bus`                  | `EventBus`        | `None`       | Event bus for telemetry                           |
 
 ```python
-from openjarvis.sandbox import ContainerRunner, SandboxedAgent
-from openjarvis.agents.simple import SimpleAgent
+from freya.sandbox import ContainerRunner, SandboxedAgent
+from freya.agents.simple import SimpleAgent
 
 runner = ContainerRunner(
-    image="openjarvis-sandbox:latest",
+    image="freya-sandbox:latest",
     timeout=60,
-    mount_allowlist_path="/etc/openjarvis/mount_allowlist.json",
+    mount_allowlist_path="/etc/freya/mount_allowlist.json",
 )
 inner = SimpleAgent(engine, model="qwen3:8b")
 agent = SandboxedAgent(
@@ -619,7 +619,7 @@ result = agent.run("Summarize the CSV files in /home/user/data")
 
 | Parameter              | Type   | Default                      | Description                                    |
 |------------------------|--------|------------------------------|------------------------------------------------|
-| `image`                | `str`  | `"openjarvis-sandbox:latest"`| Docker image to run                            |
+| `image`                | `str`  | `"freya-sandbox:latest"`| Docker image to run                            |
 | `timeout`              | `int`  | `300`                        | Max container execution time in seconds        |
 | `mount_allowlist_path` | `str`  | `""`                         | Path to JSON mount-allowlist file              |
 | `max_concurrent`       | `int`  | `5`                          | Max concurrent containers (informational)      |
@@ -649,7 +649,7 @@ If `mount_allowlist_path` is not set, no root restriction is applied. Blocked pa
 Agents are registered via the `@AgentRegistry.register()` decorator. This makes them discoverable by name at runtime:
 
 ```python
-from openjarvis.core.registry import AgentRegistry
+from freya.core.registry import AgentRegistry
 
 # Check if an agent is registered
 AgentRegistry.contains("orchestrator")  # True

@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import pytest
 
-from openjarvis.core.events import EventBus, EventType
-from openjarvis.workflow.builder import WorkflowBuilder
-from openjarvis.workflow.engine import WorkflowEngine
-from openjarvis.workflow.graph import WorkflowGraph
-from openjarvis.workflow.types import NodeType, WorkflowEdge, WorkflowNode
+from freya.core.events import EventBus, EventType
+from freya.workflow.builder import WorkflowBuilder
+from freya.workflow.engine import WorkflowEngine
+from freya.workflow.graph import WorkflowGraph
+from freya.workflow.types import NodeType, WorkflowEdge, WorkflowNode
 
 
 class TestWorkflowGraph:

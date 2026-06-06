@@ -6,12 +6,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from openjarvis.agents._stubs import AgentContext
-from openjarvis.agents.native_react import NativeReActAgent
-from openjarvis.core.events import EventBus, EventType
-from openjarvis.core.registry import AgentRegistry
-from openjarvis.core.types import Conversation, Message, Role, ToolResult
-from openjarvis.tools._stubs import BaseTool, ToolSpec
+from freya.agents._stubs import AgentContext
+from freya.agents.native_react import NativeReActAgent
+from freya.core.events import EventBus, EventType
+from freya.core.registry import AgentRegistry
+from freya.core.types import Conversation, Message, Role, ToolResult
+from freya.tools._stubs import BaseTool, ToolSpec
 
 # ---------------------------------------------------------------------------
 # Helpers

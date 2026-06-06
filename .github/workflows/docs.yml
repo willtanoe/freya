@@ -6,13 +6,13 @@ on:
     paths:
       - "docs/**"
       - "mkdocs.yml"
-      - "src/openjarvis/**"
+      - "src/freya/**"
   pull_request:
     branches: [main]
     paths:
       - "docs/**"
       - "mkdocs.yml"
-      - "src/openjarvis/**"
+      - "src/freya/**"
   workflow_dispatch:
 
 permissions:

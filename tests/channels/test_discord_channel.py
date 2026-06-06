@@ -7,10 +7,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from openjarvis.channels._stubs import ChannelStatus
-from openjarvis.channels.discord_channel import DiscordChannel
-from openjarvis.core.events import EventBus, EventType
-from openjarvis.core.registry import ChannelRegistry
+from freya.channels._stubs import ChannelStatus
+from freya.channels.discord_channel import DiscordChannel
+from freya.core.events import EventBus, EventType
+from freya.core.registry import ChannelRegistry
 from tests.channels.channel_test_helpers import make_common_channel_tests
 
 

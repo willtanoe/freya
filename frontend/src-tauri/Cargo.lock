@@ -2592,7 +2592,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "openjarvis-desktop"
+name = "freya-desktop"
 version = "1.0.1"
 dependencies = [
  "dispatch",

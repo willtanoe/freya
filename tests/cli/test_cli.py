@@ -10,12 +10,12 @@ from unittest import mock
 
 from click.testing import CliRunner
 
-import openjarvis
-from openjarvis.cli import cli, main
+import freya
+from freya.cli import cli, main
 
 
 class TestMainEntryPoint:
-    """Tests for the ``jarvis`` console script entry point."""
+    """Tests for the ``freya`` console script entry point."""
 
     def test_windows_reconfigures_stdout_to_utf8(self) -> None:
         """On Windows, main() must reconfigure stdout/stderr to UTF-8 so that
@@ -27,7 +27,7 @@ class TestMainEntryPoint:
             mock.patch.object(sys, "platform", "win32"),
             mock.patch.object(sys, "stdout", stdout_mock),
             mock.patch.object(sys, "stderr", stderr_mock),
-            mock.patch("openjarvis.cli.cli") as cli_mock,
+            mock.patch("freya.cli.cli") as cli_mock,
         ):
             main()
         stdout_mock.reconfigure.assert_called_once_with(
@@ -44,7 +44,7 @@ class TestMainEntryPoint:
         with (
             mock.patch.object(sys, "platform", "linux"),
             mock.patch.object(sys, "stdout", stdout_mock),
-            mock.patch("openjarvis.cli.cli") as cli_mock,
+            mock.patch("freya.cli.cli") as cli_mock,
         ):
             main()
         stdout_mock.reconfigure.assert_not_called()
@@ -55,12 +55,12 @@ class TestCLI:
     def test_help(self) -> None:
         result = CliRunner().invoke(cli, ["--help"])
         assert result.exit_code == 0
-        assert "OpenJarvis" in result.output
+        assert "Freya" in result.output
 
     def test_version(self) -> None:
         result = CliRunner().invoke(cli, ["--version"])
         assert result.exit_code == 0
-        assert openjarvis.__version__ in result.output
+        assert freya.__version__ in result.output
 
     def test_ask_requires_query(self) -> None:
         result = CliRunner().invoke(cli, ["ask"])
@@ -123,12 +123,12 @@ class TestCLI:
         assert "list" in result.output
 
     def test_init_creates_config(self, tmp_path: Path) -> None:
-        config_dir = tmp_path / ".openjarvis"
+        config_dir = tmp_path / ".freya"
         config_path = config_dir / "config.toml"
         with (
-            mock.patch("openjarvis.cli.init_cmd.DEFAULT_CONFIG_DIR", config_dir),
-            mock.patch("openjarvis.cli.init_cmd.DEFAULT_CONFIG_PATH", config_path),
-            mock.patch("openjarvis.cli.init_cmd.PrivacyScanner"),
+            mock.patch("freya.cli.init_cmd.DEFAULT_CONFIG_DIR", config_dir),
+            mock.patch("freya.cli.init_cmd.DEFAULT_CONFIG_PATH", config_path),
+            mock.patch("freya.cli.init_cmd.PrivacyScanner"),
         ):
             result = CliRunner().invoke(
                 cli, ["init", "--engine", "ollama", "--no-download"]
@@ -143,7 +143,7 @@ class TestStartupResilience:
     """Importing the CLI must not force heavy/native deps (#404, #309).
 
     A broken or slow numpy on Windows otherwise raises at import time and takes
-    down every `jarvis` command — including `jarvis serve` — because the CLI
+    down every `freya` command — including `freya serve` — because the CLI
     eagerly pulls the deep-research command chain (-> embeddings -> numpy).
     """
 
@@ -151,7 +151,7 @@ class TestStartupResilience:
         # Run in a fresh subprocess: the pytest session itself almost certainly
         # has numpy loaded from other tests, so an in-process check is useless.
         code = (
-            "import openjarvis.cli, sys; "
+            "import freya.cli, sys; "
             "leaked=[m for m in sys.modules if m=='numpy' or m.startswith('numpy.')]; "
             "assert not leaked, leaked; "
             "print('numpy-free')"
@@ -160,6 +160,6 @@ class TestStartupResilience:
             [sys.executable, "-c", code], capture_output=True, text=True
         )
         assert result.returncode == 0, (
-            "importing openjarvis.cli pulled in numpy (a broken numpy would then "
-            f"crash `jarvis serve`):\nstdout={result.stdout}\nstderr={result.stderr}"
+            "importing freya.cli pulled in numpy (a broken numpy would then "
+            f"crash `freya serve`):\nstdout={result.stdout}\nstderr={result.stderr}"
         )

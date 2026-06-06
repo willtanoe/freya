@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from openjarvis.agents.opencode import (
+from freya.agents.opencode import (
     OpenCodeAgent,
     _derive_openai_base_url,
     _extract_text,
@@ -22,7 +22,7 @@ SPIKE_RESPONSE = {
         "role": "assistant",
         "agent": "build",
         "modelID": "local-model",
-        "providerID": "openjarvis",
+        "providerID": "freya",
         "finish": "stop",
         "tokens": {"input": 0, "output": 0},
         "sessionID": "ses_x",
@@ -82,12 +82,12 @@ class TestDeriveBaseUrl:
 
 class TestAvailability:
     def test_true(self, monkeypatch):
-        monkeypatch.setattr("openjarvis.agents.opencode.shutil.which",
+        monkeypatch.setattr("freya.agents.opencode.shutil.which",
                             lambda n: "/usr/bin/opencode")
         assert is_opencode_available() is True
 
     def test_false(self, monkeypatch):
-        monkeypatch.setattr("openjarvis.agents.opencode.shutil.which", lambda n: None)
+        monkeypatch.setattr("freya.agents.opencode.shutil.which", lambda n: None)
         assert is_opencode_available() is False
 
 
@@ -95,7 +95,7 @@ class TestConfigBuilding:
     def test_includes_provider_when_base_url(self, tmp_path):
         cfg = OpenCodeAgent(SimpleNamespace(_host="http://localhost:11434"),
                             "qwen3:8b", workspace=str(tmp_path))._build_config()
-        prov = cfg["provider"]["openjarvis"]
+        prov = cfg["provider"]["freya"]
         assert prov["npm"] == "@ai-sdk/openai-compatible"
         assert prov["options"]["baseURL"] == "http://localhost:11434/v1"
         assert "qwen3:8b" in prov["models"]
@@ -133,7 +133,7 @@ class TestConfigBuilding:
 
 class TestRunGracefulDegradation:
     def test_missing_binary_returns_error_result(self, monkeypatch, tmp_path):
-        monkeypatch.setattr("openjarvis.agents.opencode.shutil.which", lambda n: None)
+        monkeypatch.setattr("freya.agents.opencode.shutil.which", lambda n: None)
         agent = OpenCodeAgent(SimpleNamespace(_host="http://h:1"), "m",
                               workspace=str(tmp_path),
                               opencode_bin="/nonexistent/opencode")
@@ -209,9 +209,9 @@ class TestRunParsing:
         assert res.metadata["finish"] == "stop"
         assert res.metadata["model_id"] == "local-model"
         assert res.metadata["agent"] == "build"
-        # the model was addressed as openjarvis/local-model
+        # the model was addressed as freya/local-model
         assert _FakeClient.last_body["model"] == {
-            "providerID": "openjarvis", "modelID": "local-model"
+            "providerID": "freya", "modelID": "local-model"
         }
         # tool-results recovered from the intermediate message (not the final one)
         assert len(res.tool_results) == 1

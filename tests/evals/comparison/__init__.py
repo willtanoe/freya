@@ -1,1 +1,1 @@
-"""Tests for openjarvis.evals.comparison."""
+"""Tests for freya.evals.comparison."""

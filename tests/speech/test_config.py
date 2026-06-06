@@ -1,6 +1,6 @@
 """Tests for speech configuration."""
 
-from openjarvis.core.config import JarvisConfig, SpeechConfig
+from freya.core.config import FreyaConfig, SpeechConfig
 
 
 def test_speech_config_defaults():
@@ -12,15 +12,15 @@ def test_speech_config_defaults():
     assert cfg.compute_type == "float16"
 
 
-def test_jarvis_config_has_speech():
-    cfg = JarvisConfig()
+def test_freya_config_has_speech():
+    cfg = FreyaConfig()
     assert hasattr(cfg, "speech")
     assert isinstance(cfg.speech, SpeechConfig)
     assert cfg.speech.backend == "auto"
 
 
-def test_jarvis_system_has_speech_backend():
-    """JarvisSystem has a speech_backend attribute."""
-    from openjarvis.system import JarvisSystem
+def test_freya_system_has_speech_backend():
+    """FreyaSystem has a speech_backend attribute."""
+    from freya.system import FreyaSystem
 
-    assert "speech_backend" in JarvisSystem.__dataclass_fields__
+    assert "speech_backend" in FreyaSystem.__dataclass_fields__

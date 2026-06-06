@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
-from openjarvis.agents.executor import AgentExecutor
-from openjarvis.agents.manager import AgentManager
-from openjarvis.core.events import EventBus
+from freya.agents.executor import AgentExecutor
+from freya.agents.manager import AgentManager
+from freya.core.events import EventBus
 from tests.agents.fake_engine import FakeEngine
 from tests.agents.scenario_harness import FakeSystem
 
 
 def _register_agent():
     """Re-register MonitorOperativeAgent (cleared by autouse fixture)."""
-    from openjarvis.agents.monitor_operative import MonitorOperativeAgent
-    from openjarvis.core.registry import AgentRegistry
+    from freya.agents.monitor_operative import MonitorOperativeAgent
+    from freya.core.registry import AgentRegistry
 
     if not AgentRegistry.contains("monitor_operative"):
         AgentRegistry.register("monitor_operative")(MonitorOperativeAgent)

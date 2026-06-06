@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from openjarvis.agents._stubs import AgentContext
-from openjarvis.agents.orchestrator import OrchestratorAgent
-from openjarvis.core.events import EventBus, EventType
-from openjarvis.core.types import Conversation, Message, Role, ToolResult
-from openjarvis.tools._stubs import BaseTool, ToolSpec
+from freya.agents._stubs import AgentContext
+from freya.agents.orchestrator import OrchestratorAgent
+from freya.core.events import EventBus, EventType
+from freya.core.types import Conversation, Message, Role, ToolResult
+from freya.tools._stubs import BaseTool, ToolSpec
 
 # ---------------------------------------------------------------------------
 # Helpers

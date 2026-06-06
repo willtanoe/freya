@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from openjarvis.channels._stubs import ChannelStatus
-from openjarvis.core.registry import ChannelRegistry
+from freya.channels._stubs import ChannelStatus
+from freya.core.registry import ChannelRegistry
 
 
 def make_common_channel_tests(

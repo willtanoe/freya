@@ -8,11 +8,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from openjarvis.core.events import EventBus, EventType
-from openjarvis.core.types import Message, Role, TelemetryRecord
-from openjarvis.telemetry.aggregator import TelemetryAggregator
-from openjarvis.telemetry.instrumented_engine import InstrumentedEngine
-from openjarvis.telemetry.store import TelemetryStore
+from freya.core.events import EventBus, EventType
+from freya.core.types import Message, Role, TelemetryRecord
+from freya.telemetry.aggregator import TelemetryAggregator
+from freya.telemetry.instrumented_engine import InstrumentedEngine
+from freya.telemetry.store import TelemetryStore
 
 # ---------------------------------------------------------------------------
 # Helpers

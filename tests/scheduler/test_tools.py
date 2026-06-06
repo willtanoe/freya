@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from openjarvis.scheduler.scheduler import ScheduledTask
-from openjarvis.scheduler.tools import (
+from freya.scheduler.scheduler import ScheduledTask
+from freya.scheduler.tools import (
     CancelScheduledTaskTool,
     ListScheduledTasksTool,
     PauseScheduledTaskTool,

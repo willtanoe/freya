@@ -10,9 +10,9 @@ import os
 
 import pytest
 
-from openjarvis.core.registry import EngineRegistry
-from openjarvis.core.types import Message, Role
-from openjarvis.engine.cloud import CloudEngine
+from freya.core.registry import EngineRegistry
+from freya.core.types import Message, Role
+from freya.engine.cloud import CloudEngine
 
 _MINIMAX_KEY = os.environ.get("MINIMAX_API_KEY", "")
 _skip_no_key = pytest.mark.skipif(

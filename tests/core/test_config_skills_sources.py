@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from openjarvis.core.config import SkillsConfig, SkillSourceConfig
+from freya.core.config import SkillsConfig, SkillSourceConfig
 
 
 class TestSkillSourceConfig:

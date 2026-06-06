@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from openjarvis.connectors._stubs import Document
-from openjarvis.connectors.pipeline import IngestionPipeline
-from openjarvis.connectors.store import KnowledgeStore
+from freya.connectors._stubs import Document
+from freya.connectors.pipeline import IngestionPipeline
+from freya.connectors.store import KnowledgeStore
 
 # ---------------------------------------------------------------------------
 # Helpers

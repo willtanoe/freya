@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from openjarvis.core.config import GpuInfo, HardwareInfo, recommend_model
+from freya.core.config import GpuInfo, HardwareInfo, recommend_model
 
 
 class TestRecommendModelTiers:

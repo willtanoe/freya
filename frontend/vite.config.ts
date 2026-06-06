@@ -16,8 +16,8 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'OpenJarvis',
-        short_name: 'Jarvis',
+        name: 'Freya',
+        short_name: 'Freya',
         description: 'On-device AI assistant',
         theme_color: '#161618',
         background_color: '#161618',
@@ -34,7 +34,7 @@ export default defineConfig({
     }),
   ],
   build: {
-    outDir: '../src/openjarvis/server/static',
+    outDir: '../src/freya/server/static',
     emptyOutDir: true,
     minify: 'esbuild',
     rollupOptions: {

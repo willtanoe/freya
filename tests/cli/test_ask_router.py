@@ -1,4 +1,4 @@
-"""Tests for model resolution fallback chain in jarvis ask."""
+"""Tests for model resolution fallback chain in freya ask."""
 
 from __future__ import annotations
 
@@ -7,9 +7,9 @@ from unittest import mock
 
 from click.testing import CliRunner
 
-from openjarvis.cli import cli
+from freya.cli import cli
 
-_ask_mod = importlib.import_module("openjarvis.cli.ask")
+_ask_mod = importlib.import_module("freya.cli.ask")
 
 
 def _mock_engine():
@@ -30,12 +30,12 @@ def _mock_engine():
 def _register_agents():
     """Re-register agents after the conftest registry clear.
 
-    The default ``JarvisConfig().agent.default_agent`` is ``"simple"``,
-    so ``jarvis ask "..."`` (without ``--agent``) routes through SimpleAgent.
+    The default ``FreyaConfig().agent.default_agent`` is ``"simple"``,
+    so ``freya ask "..."`` (without ``--agent``) routes through SimpleAgent.
     Without this re-registration, that path raises ``Unknown agent: simple``.
     """
-    from openjarvis.agents.simple import SimpleAgent
-    from openjarvis.core.registry import AgentRegistry
+    from freya.agents.simple import SimpleAgent
+    from freya.core.registry import AgentRegistry
 
     if not AgentRegistry.contains("simple"):
         AgentRegistry.register_value("simple", SimpleAgent)

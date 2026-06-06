@@ -7,9 +7,9 @@ from unittest import mock
 
 import pytest
 
-from openjarvis.core.registry import EngineRegistry
-from openjarvis.core.types import Message, Role
-from openjarvis.engine.cloud import (
+from freya.core.registry import EngineRegistry
+from freya.core.types import Message, Role
+from freya.engine.cloud import (
     CloudEngine,
     _is_codex_model,
     estimate_cost,
@@ -281,7 +281,7 @@ class TestCodexGenerate:
         }
 
         with mock.patch(
-            "openjarvis.engine.cloud.httpx.post",
+            "freya.engine.cloud.httpx.post",
             return_value=fake_response,
         ) as mock_post:
             result = engine.generate(
@@ -328,7 +328,7 @@ class TestCodexGenerate:
         }
 
         with mock.patch(
-            "openjarvis.engine.cloud.httpx.post",
+            "freya.engine.cloud.httpx.post",
             return_value=fake_response,
         ):
             result = engine.generate(
@@ -357,7 +357,7 @@ class TestCodexGenerate:
         }
 
         with mock.patch(
-            "openjarvis.engine.cloud.httpx.post",
+            "freya.engine.cloud.httpx.post",
             return_value=fake_response,
         ) as mock_post:
             engine.generate(

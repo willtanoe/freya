@@ -9,9 +9,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from openjarvis.core.config import GpuInfo, HardwareInfo
-from openjarvis.core.events import EventBus, reset_event_bus
-from openjarvis.core.registry import (
+from freya.core.config import GpuInfo, HardwareInfo
+from freya.core.events import EventBus, reset_event_bus
+from freya.core.registry import (
     AgentRegistry,
     BenchmarkRegistry,
     ChannelRegistry,

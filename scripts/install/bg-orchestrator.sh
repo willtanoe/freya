@@ -9,9 +9,9 @@
 
 set -euo pipefail
 
-OPENJARVIS_HOME="${OPENJARVIS_HOME:-$HOME/.openjarvis}"
-STATE_DIR="$OPENJARVIS_HOME/.state"
-SCRIPTS_DIR="$OPENJARVIS_HOME/.scripts"
+FREYA_HOME="${FREYA_HOME:-$HOME/.freya}"
+STATE_DIR="$FREYA_HOME/.state"
+SCRIPTS_DIR="$FREYA_HOME/.scripts"
 PID_FILE="$STATE_DIR/bg.pid"
 LOG="$STATE_DIR/bg-orchestrator.log"
 

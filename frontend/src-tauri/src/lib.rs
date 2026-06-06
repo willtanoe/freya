@@ -7,7 +7,7 @@ use tauri_plugin_autostart::MacosLauncher;
 use tokio::sync::Mutex;
 
 const OLLAMA_PORT: u16 = 11434;
-const JARVIS_PORT: u16 = 8000;
+const FREYA_PORT: u16 = 8000;
 
 /// Small, fast model pulled at startup so the app opens quickly.
 const STARTUP_MODEL: &str = "qwen3.5:4b";
@@ -108,9 +108,9 @@ struct BootPlan {
     model_to_pull: Option<String>,
     /// Optional `(engine_key, bare_host)` override for a custom endpoint,
     /// e.g. `("lmstudio", "http://localhost:1234")`. Written into
-    /// ~/.openjarvis/config.toml so `jarvis serve` picks it up.
+    /// ~/.freya/config.toml so `freya serve` picks it up.
     engine_host: Option<(String, String)>,
-    /// Args appended after `uv run jarvis serve --port <port>`.
+    /// Args appended after `uv run freya serve --port <port>`.
     serve_args: Vec<String>,
 }
 
@@ -154,7 +154,7 @@ fn boot_plan(cfg: &InferenceConfig, ram_gb: f64) -> BootPlan {
                 .clone()
                 .filter(|h| !h.is_empty())
                 .map(|h| (engine.clone(), h));
-            // `model` may be empty if the config is malformed; `jarvis serve`
+            // `model` may be empty if the config is malformed; `freya serve`
             // surfaces a clear error then (there is no universal default model
             // for an arbitrary endpoint).
             let model = cfg.model.clone().unwrap_or_default();
@@ -264,12 +264,12 @@ fn resolve_bin(name: &str) -> String {
     name.to_string()
 }
 
-/// Find the OpenJarvis project root (contains pyproject.toml).
-/// Checks OPENJARVIS_ROOT env var, walks up from the executable, then
+/// Find the Freya project root (contains pyproject.toml).
+/// Checks FREYA_ROOT env var, walks up from the executable, then
 /// probes common clone locations.
 fn find_project_root() -> Option<std::path::PathBuf> {
     // 1. Explicit env var override
-    if let Ok(root) = std::env::var("OPENJARVIS_ROOT") {
+    if let Ok(root) = std::env::var("FREYA_ROOT") {
         let path = std::path::PathBuf::from(&root);
         if path.join("pyproject.toml").exists() {
             return Some(path);
@@ -292,18 +292,18 @@ fn find_project_root() -> Option<std::path::PathBuf> {
     // 3. Fallback: well-known direct paths
     let home = home_dir();
     let direct = [
-        format!("{home}/OpenJarvis"),
-        format!("{home}/projects/hazy/OpenJarvis"),
-        format!("{home}/projects/OpenJarvis"),
-        format!("{home}/src/OpenJarvis"),
-        format!("{home}/Documents/OpenJarvis"),
-        format!("{home}/Desktop/OpenJarvis"),
-        format!("{home}/Developer/OpenJarvis"),
-        format!("{home}/dev/OpenJarvis"),
-        format!("{home}/Code/OpenJarvis"),
-        format!("{home}/code/OpenJarvis"),
-        format!("{home}/repos/OpenJarvis"),
-        format!("{home}/github/OpenJarvis"),
+        format!("{home}/Freya"),
+        format!("{home}/projects/hazy/Freya"),
+        format!("{home}/projects/Freya"),
+        format!("{home}/src/Freya"),
+        format!("{home}/Documents/Freya"),
+        format!("{home}/Desktop/Freya"),
+        format!("{home}/Developer/Freya"),
+        format!("{home}/dev/Freya"),
+        format!("{home}/Code/Freya"),
+        format!("{home}/code/Freya"),
+        format!("{home}/repos/Freya"),
+        format!("{home}/github/Freya"),
     ];
     for p in &direct {
         let path = std::path::PathBuf::from(p);
@@ -312,8 +312,8 @@ fn find_project_root() -> Option<std::path::PathBuf> {
         }
     }
 
-    // 4. Shallow scan: look for OpenJarvis one level inside common parent dirs.
-    //    This catches clones like ~/Documents/my-stuff/OpenJarvis without
+    // 4. Shallow scan: look for Freya one level inside common parent dirs.
+    //    This catches clones like ~/Documents/my-stuff/Freya without
     //    needing to enumerate every possible intermediate folder.
     let scan_parents = [
         format!("{home}/Documents"),
@@ -331,13 +331,13 @@ fn find_project_root() -> Option<std::path::PathBuf> {
         let parent_path = std::path::PathBuf::from(parent);
         if let Ok(entries) = std::fs::read_dir(&parent_path) {
             for entry in entries.flatten() {
-                let candidate = entry.path().join("OpenJarvis");
+                let candidate = entry.path().join("Freya");
                 if candidate.join("pyproject.toml").exists() {
                     return Some(candidate);
                 }
-                // Also check if the entry itself is OpenJarvis (case-insensitive match)
+                // Also check if the entry itself is Freya (case-insensitive match)
                 if let Some(name) = entry.file_name().to_str() {
-                    if name.eq_ignore_ascii_case("openjarvis")
+                    if name.eq_ignore_ascii_case("freya")
                         && entry.path().join("pyproject.toml").exists()
                     {
                         return Some(entry.path());
@@ -351,7 +351,7 @@ fn find_project_root() -> Option<std::path::PathBuf> {
 }
 
 // ---------------------------------------------------------------------------
-// BackendManager — owns the Ollama + Jarvis server child processes
+// BackendManager — owns the Ollama + Freya server child processes
 // ---------------------------------------------------------------------------
 
 struct ChildHandle {
@@ -364,10 +364,10 @@ impl ChildHandle {
     }
 }
 
-/// Rolling buffer holding the most recent ~16 KB of jarvis stderr.
+/// Rolling buffer holding the most recent ~16 KB of freya stderr.
 ///
 /// Populated by a background drainer task spawned at boot so the pipe
-/// never fills and back-pressures `jarvis serve`; consumed by the boot
+/// never fills and back-pressures `freya serve`; consumed by the boot
 /// path when surfacing failure messages.
 type StderrTail = Arc<Mutex<Vec<u8>>>;
 
@@ -375,26 +375,26 @@ const STDERR_TAIL_LIMIT: usize = 16 * 1024;
 
 struct BackendManager {
     ollama: Option<ChildHandle>,
-    jarvis: Option<ChildHandle>,
-    jarvis_stderr_tail: StderrTail,
+    freya: Option<ChildHandle>,
+    freya_stderr_tail: StderrTail,
 }
 
 impl Default for BackendManager {
     fn default() -> Self {
         Self {
             ollama: None,
-            jarvis: None,
-            jarvis_stderr_tail: Arc::new(Mutex::new(Vec::new())),
+            freya: None,
+            freya_stderr_tail: Arc::new(Mutex::new(Vec::new())),
         }
     }
 }
 
 impl BackendManager {
     async fn stop_all(&mut self) {
-        if let Some(ref mut h) = self.jarvis {
+        if let Some(ref mut h) = self.freya {
             h.kill().await;
         }
-        self.jarvis = None;
+        self.freya = None;
         if let Some(ref mut h) = self.ollama {
             h.kill().await;
         }
@@ -479,29 +479,29 @@ async fn endpoint_reachable(host: &str, timeout: Duration) -> bool {
     false
 }
 
-/// Outcome of waiting for `jarvis serve` to become healthy.
+/// Outcome of waiting for `freya serve` to become healthy.
 ///
 /// Unlike [`wait_for_url`] this differentiates "server is up but degraded"
 /// (HTTP 503 — usually inference engine failed to load) from "server never
 /// came up" and from "child process died before serving anything", because
 /// each needs a different user-facing message.
 #[derive(Debug)]
-enum JarvisStartResult {
+enum FreyaStartResult {
     /// `/health` returned 2xx.
     Ready,
     /// Server replied 503. The body is the actionable message (typically
     /// "engine not ready" or a model-load error).
     ServiceUnavailable(String),
-    /// The `jarvis serve` child exited before `/health` returned 2xx.
+    /// The `freya serve` child exited before `/health` returned 2xx.
     EarlyExit { code: Option<i32>, stderr: String },
     /// Deadline elapsed without ever seeing 2xx or an early exit.
     Timeout,
 }
 
-/// Spawn a detached task that continuously drains `jarvis serve`'s
+/// Spawn a detached task that continuously drains `freya serve`'s
 /// stderr into a rolling tail buffer.
 ///
-/// We MUST keep reading stderr for as long as the child runs — `jarvis
+/// We MUST keep reading stderr for as long as the child runs — `freya
 /// serve` is chatty (engine load progress, request logs), and the OS
 /// pipe buffer is small (4 KB on Windows, 64 KB on Linux). Once full,
 /// the child's next stderr write blocks indefinitely and the server
@@ -511,7 +511,7 @@ enum JarvisStartResult {
 ///
 /// Returns immediately after spawning the task; the task ends naturally
 /// when the child closes stderr (i.e. exits).
-fn spawn_jarvis_stderr_drainer(mut stderr: tokio::process::ChildStderr, tail: StderrTail) {
+fn spawn_freya_stderr_drainer(mut stderr: tokio::process::ChildStderr, tail: StderrTail) {
     use tokio::io::AsyncReadExt;
     tokio::spawn(async move {
         let mut buf = vec![0u8; 4096];
@@ -536,25 +536,25 @@ fn spawn_jarvis_stderr_drainer(mut stderr: tokio::process::ChildStderr, tail: St
 ///
 /// Safe to call at any time; returns an empty string before the
 /// drainer has seen any bytes. Trimmed.
-async fn read_jarvis_stderr_tail(backend: &SharedBackend) -> String {
-    let tail = backend.lock().await.jarvis_stderr_tail.clone();
+async fn read_freya_stderr_tail(backend: &SharedBackend) -> String {
+    let tail = backend.lock().await.freya_stderr_tail.clone();
     let bytes = tail.lock().await.clone();
     String::from_utf8_lossy(&bytes).trim().to_string()
 }
 
-/// Poll `jarvis serve` health, watching the child process state so we
+/// Poll `freya serve` health, watching the child process state so we
 /// never wait 10 minutes for a process that crashed in the first second.
-async fn wait_for_jarvis_health(
+async fn wait_for_freya_health(
     url: &str,
     timeout: Duration,
     backend: &SharedBackend,
-) -> JarvisStartResult {
+) -> FreyaStartResult {
     let client = match reqwest::Client::builder()
         .timeout(Duration::from_secs(2))
         .build()
     {
         Ok(c) => c,
-        Err(_) => return JarvisStartResult::Timeout,
+        Err(_) => return FreyaStartResult::Timeout,
     };
     let deadline = tokio::time::Instant::now() + timeout;
     loop {
@@ -564,14 +564,14 @@ async fn wait_for_jarvis_health(
         // the full HTTP timeout window.
         let exit_status = {
             let mut mgr = backend.lock().await;
-            match mgr.jarvis.as_mut() {
+            match mgr.freya.as_mut() {
                 Some(h) => h.child.try_wait().ok().flatten(),
                 None => None,
             }
         };
         if let Some(status) = exit_status {
-            let stderr = read_jarvis_stderr_tail(backend).await;
-            return JarvisStartResult::EarlyExit {
+            let stderr = read_freya_stderr_tail(backend).await;
+            return FreyaStartResult::EarlyExit {
                 code: status.code(),
                 stderr,
             };
@@ -582,14 +582,14 @@ async fn wait_for_jarvis_health(
             Ok(resp) => {
                 let status = resp.status();
                 if status.is_success() {
-                    return JarvisStartResult::Ready;
+                    return FreyaStartResult::Ready;
                 }
                 if status == reqwest::StatusCode::SERVICE_UNAVAILABLE {
                     // Server is up but the inference engine is not. This
                     // is a terminal-for-us state — polling won't change
                     // anything; the user has to fix their engine config.
                     let body = resp.text().await.unwrap_or_default();
-                    return JarvisStartResult::ServiceUnavailable(body);
+                    return FreyaStartResult::ServiceUnavailable(body);
                 }
                 // Other non-2xx (e.g. 404 during a brief routing-table
                 // warmup window) — fall through and keep polling.
@@ -601,7 +601,7 @@ async fn wait_for_jarvis_health(
         }
 
         if tokio::time::Instant::now() >= deadline {
-            return JarvisStartResult::Timeout;
+            return FreyaStartResult::Timeout;
         }
         tokio::time::sleep(Duration::from_millis(500)).await;
     }
@@ -691,7 +691,7 @@ fn format_uv_sync_failure(
 
 /// Strip AppImage-injected environment from a subprocess command (#455).
 ///
-/// When the OpenJarvis desktop binary is shipped as an AppImage, the AppImage
+/// When the Freya desktop binary is shipped as an AppImage, the AppImage
 /// runtime sets `LD_LIBRARY_PATH` (and friends) to the extracted-to-/tmp
 /// bundled lib dir. Any child we spawn inherits that env by default — but the
 /// children we spawn (`uv`, `ollama`, `git`) live outside the AppImage and
@@ -727,7 +727,7 @@ fn prepare_subprocess_for_appimage(cmd: &mut tokio::process::Command) {
 fn format_uv_sync_spawn_error(root: &std::path::Path, uv_bin: &str, err: &str) -> String {
     format!(
         "Could not run `uv sync`: {}. Verify uv is installed at \
-         `{}` and the OpenJarvis repo is at `{}`.",
+         `{}` and the Freya repo is at `{}`.",
         err,
         uv_bin,
         root.display(),
@@ -872,8 +872,8 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
             ));
             return;
         }
-        // Point `jarvis serve` at the user's endpoint by writing the engine
-        // host into ~/.openjarvis/config.toml (the env var alone is shadowed by
+        // Point `freya serve` at the user's endpoint by writing the engine
+        // host into ~/.freya/config.toml (the env var alone is shadowed by
         // the engine's non-empty default host in the Python layer).
         if let Some((engine, host)) = &plan.engine_host {
             if let Err(e) = set_engine_host_in_config(engine, host) {
@@ -890,7 +890,7 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
         }
     }
 
-    // Phase 3: Start jarvis serve
+    // Phase 3: Start freya serve
     {
         let mut s = status.lock().await;
         s.phase = "server".into();
@@ -946,15 +946,15 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
             return;
         }
 
-        let target_path = std::path::PathBuf::from(home_dir()).join("OpenJarvis");
+        let target_path = std::path::PathBuf::from(home_dir()).join("Freya");
         let clone_target = target_path.display().to_string();
 
         // If the directory exists but is not a valid project, don't overwrite
         if target_path.exists() && !target_path.join("pyproject.toml").exists() {
             let mut s = status.lock().await;
             s.error = Some(format!(
-                "{} exists but is not a valid OpenJarvis project. \
-                 Remove it and relaunch, or set OPENJARVIS_ROOT to the correct path.",
+                "{} exists but is not a valid Freya project. \
+                 Remove it and relaunch, or set FREYA_ROOT to the correct path.",
                 clone_target,
             ));
             return;
@@ -962,7 +962,7 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
 
         {
             let mut s = status.lock().await;
-            s.detail = "Downloading OpenJarvis (first launch)...".into();
+            s.detail = "Downloading Freya (first launch)...".into();
         }
 
         let clone_result = tokio::process::Command::new(&git_bin)
@@ -970,7 +970,7 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
                 "clone",
                 "--depth",
                 "1",
-                "https://github.com/open-jarvis/OpenJarvis.git",
+                "https://github.com/freya-ai/Freya.git",
                 &clone_target,
             ])
             .stdout(std::process::Stdio::null())
@@ -986,8 +986,8 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
                     let stderr = String::from_utf8_lossy(&output.stderr);
                     let mut s = status.lock().await;
                     s.error = Some(format!(
-                        "Failed to download OpenJarvis: {}. \
-                         Clone manually: git clone https://github.com/open-jarvis/OpenJarvis.git {}",
+                        "Failed to download Freya: {}. \
+                         Clone manually: git clone https://github.com/freya-ai/Freya.git {}",
                         stderr.trim(),
                         clone_target,
                     ));
@@ -996,8 +996,8 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
                 Err(e) => {
                     let mut s = status.lock().await;
                     s.error = Some(format!(
-                        "Failed to download OpenJarvis: {}. \
-                         Clone manually: git clone https://github.com/open-jarvis/OpenJarvis.git {}",
+                        "Failed to download Freya: {}. \
+                         Clone manually: git clone https://github.com/freya-ai/Freya.git {}",
                         e, clone_target,
                     ));
                     return;
@@ -1020,16 +1020,16 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
     //
     // The OLD behaviour was: any HTTP response (even 404) → `fuser -k 8000/tcp`
     // / `taskkill /PID /F`. That broke the legitimate case where a user had
-    // already started `jarvis serve` in a terminal and then launched the
+    // already started `freya serve` in a terminal and then launched the
     // desktop app — the app killed their server, then raced to spawn its
     // own, sometimes losing the race and hanging.
     //
     // New behaviour, by response shape:
-    //   * 2xx /health        — healthy jarvis serve. Attach to it; skip the
+    //   * 2xx /health        — healthy freya serve. Attach to it; skip the
     //                          uv-sync + spawn dance entirely. Done.
     //   * 503                — server is up but engine isn't ready. Surface
     //                          an actionable message; don't kill (matches
-    //                          our wait_for_jarvis_health 503 contract).
+    //                          our wait_for_freya_health 503 contract).
     //   * any other status   — something else is listening on the port. Tell
     //                          the user via the error banner instead of
     //                          force-killing a foreign service.
@@ -1037,14 +1037,14 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
     //
     // TODO(#455 follow-up): validate /health response body before attaching
     // so a multi-user host can't trivially spoof us. Also accept a port
-    // override from config instead of hard-coding JARVIS_PORT.
+    // override from config instead of hard-coding FREYA_PORT.
     {
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(2))
             .build()
             .unwrap();
         match client
-            .get(format!("http://127.0.0.1:{}/health", JARVIS_PORT))
+            .get(format!("http://127.0.0.1:{}/health", FREYA_PORT))
             .send()
             .await
         {
@@ -1055,7 +1055,7 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
                 // snapshot. Small sleep between to give the server room.
                 tokio::time::sleep(Duration::from_millis(500)).await;
                 let confirm = client
-                    .get(format!("http://127.0.0.1:{}/health", JARVIS_PORT))
+                    .get(format!("http://127.0.0.1:{}/health", FREYA_PORT))
                     .send()
                     .await
                     .map(|r| r.status().is_success())
@@ -1074,7 +1074,7 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
                     s.phase = "ready".into();
                     s.detail = format!(
                         "Connected to existing API server on port {}.",
-                        JARVIS_PORT,
+                        FREYA_PORT,
                     );
                     s.server_ready = true;
                     s.model_ready = true;
@@ -1087,9 +1087,9 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
                 s.error = Some(format!(
                     "An API server is already running on port {} but its \
                      inference engine isn't ready (HTTP 503). If this is your \
-                     `jarvis serve`, wait for it to finish loading and relaunch. \
+                     `freya serve`, wait for it to finish loading and relaunch. \
                      Otherwise, stop that service or change the port.",
-                    JARVIS_PORT,
+                    FREYA_PORT,
                 ));
                 return;
             }
@@ -1098,16 +1098,16 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
                 // a 4xx-returning instance) is on our port. Don't kill it —
                 // give the user actionable info instead.
                 let lsof_hint = if cfg!(target_os = "windows") {
-                    format!("netstat -ano | findstr :{}", JARVIS_PORT)
+                    format!("netstat -ano | findstr :{}", FREYA_PORT)
                 } else {
-                    format!("lsof -i :{}", JARVIS_PORT)
+                    format!("lsof -i :{}", FREYA_PORT)
                 };
                 let mut s = status.lock().await;
                 s.error = Some(format!(
                     "Port {} is already in use by another service (it answered \
                      /health with HTTP {}). Stop that service or change the \
-                     OpenJarvis port, then relaunch.\n\nTo identify it:\n  {}",
-                    JARVIS_PORT,
+                     Freya port, then relaunch.\n\nTo identify it:\n  {}",
+                    FREYA_PORT,
                     resp.status(),
                     lsof_hint,
                 ));
@@ -1126,9 +1126,9 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
     // Previously we ran `uv sync` with both stdout AND stderr piped to
     // /dev/null and discarded the exit code (`let _ = …`). When `uv sync`
     // failed — Windows path issues, network problems, lockfile conflicts —
-    // the user saw no error, the boot continued, `uv run jarvis serve`
+    // the user saw no error, the boot continued, `uv run freya serve`
     // then ran in an under-provisioned venv, and the user waited the full
-    // 600s health-check window before getting "Jarvis server did not
+    // 600s health-check window before getting "Freya server did not
     // become healthy in time" with no actionable detail (issue #331).
     //
     // Now: capture stderr, check the exit status, surface a useful error
@@ -1176,10 +1176,10 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
     let mut cmd = tokio::process::Command::new(&uv_bin);
     let mut serve_argv: Vec<String> = vec![
         "run".into(),
-        "jarvis".into(),
+        "freya".into(),
         "serve".into(),
         "--port".into(),
-        JARVIS_PORT.to_string(),
+        FREYA_PORT.to_string(),
     ];
     serve_argv.extend(plan.serve_args.iter().cloned());
     // If the Ollama pull fell back to a different tag than planned, serve the
@@ -1204,13 +1204,13 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
     // additions aren't accidentally stripped.
     prepare_subprocess_for_appimage(&mut cmd);
 
-    // Inject cloud API keys from ~/.openjarvis/cloud-keys.env
+    // Inject cloud API keys from ~/.freya/cloud-keys.env
     for (key, value) in read_cloud_keys() {
         cmd.env(&key, &value);
     }
-    let jarvis_child = cmd.spawn();
+    let freya_child = cmd.spawn();
 
-    match jarvis_child {
+    match freya_child {
         Ok(mut child) => {
             // Start draining stderr immediately. If we wait until the
             // health check returns we risk filling the 4 KB Windows pipe
@@ -1218,18 +1218,18 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
             // it can bind its HTTP port — exactly the symptom in #309.
             let stderr_handle = child.stderr.take();
             let mut mgr = backend.lock().await;
-            let tail = mgr.jarvis_stderr_tail.clone();
-            mgr.jarvis = Some(ChildHandle { child });
+            let tail = mgr.freya_stderr_tail.clone();
+            mgr.freya = Some(ChildHandle { child });
             drop(mgr);
             if let Some(stderr) = stderr_handle {
-                spawn_jarvis_stderr_drainer(stderr, tail);
+                spawn_freya_stderr_drainer(stderr, tail);
             }
         }
         Err(e) => {
             let mut s = status.lock().await;
             s.error = Some(format!(
-                "Could not start jarvis server: {}. \
-                 Make sure uv is installed (https://astral.sh/uv) and the OpenJarvis repo is cloned at {}",
+                "Could not start freya server: {}. \
+                 Make sure uv is installed (https://astral.sh/uv) and the Freya repo is cloned at {}",
                 e,
                 root.display(),
             ));
@@ -1237,18 +1237,18 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
         }
     }
 
-    let server_url = format!("http://127.0.0.1:{}/health", JARVIS_PORT);
-    match wait_for_jarvis_health(&server_url, Duration::from_secs(600), &backend).await {
-        JarvisStartResult::Ready => {}
-        JarvisStartResult::ServiceUnavailable(body) => {
+    let server_url = format!("http://127.0.0.1:{}/health", FREYA_PORT);
+    match wait_for_freya_health(&server_url, Duration::from_secs(600), &backend).await {
+        FreyaStartResult::Ready => {}
+        FreyaStartResult::ServiceUnavailable(body) => {
             let mut s = status.lock().await;
             s.error = Some(format!(
-                "Jarvis server is running but the inference engine is not available \
+                "Freya server is running but the inference engine is not available \
                  (HTTP 503). This usually means the configured model couldn't be loaded.\n\n\
-                 Check the server logs, or run 'uv run jarvis serve --port {}{}' \
+                 Check the server logs, or run 'uv run freya serve --port {}{}' \
                  from {} to see the engine error.\n\n\
                  Server response:\n{}",
-                JARVIS_PORT,
+                FREYA_PORT,
                 // Show the args actually passed (after `serve --port <port>`),
                 // including any post-fallback `--model` override.
                 match serve_argv.get(5..) {
@@ -1260,7 +1260,7 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
             ));
             return;
         }
-        JarvisStartResult::EarlyExit { code, stderr } => {
+        FreyaStartResult::EarlyExit { code, stderr } => {
             // `None` here means the OS didn't expose an exit code — on
             // Unix that's a signal kill (SIGKILL/SIGSEGV/...), on Windows
             // it means the process was terminated externally (Task
@@ -1271,10 +1271,10 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
             let mut s = status.lock().await;
             s.error = Some(if stderr.is_empty() {
                 format!(
-                    "Jarvis server exited (code {}) before becoming ready.\n\n\
+                    "Freya server exited (code {}) before becoming ready.\n\n\
                      No stderr output. Check that:\n\
                      1. uv is installed ({})\n\
-                     2. The OpenJarvis repo is at {}\n\
+                     2. The Freya repo is at {}\n\
                      3. 'uv sync' completes in that directory",
                     code_str,
                     uv_bin,
@@ -1282,27 +1282,27 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
                 )
             } else {
                 format!(
-                    "Jarvis server exited (code {}) before becoming ready.\n\nStderr:\n{}",
+                    "Freya server exited (code {}) before becoming ready.\n\nStderr:\n{}",
                     code_str, stderr,
                 )
             });
             return;
         }
-        JarvisStartResult::Timeout => {
-            let stderr = read_jarvis_stderr_tail(&backend).await;
+        FreyaStartResult::Timeout => {
+            let stderr = read_freya_stderr_tail(&backend).await;
             let mut s = status.lock().await;
             s.error = Some(if stderr.is_empty() {
                 format!(
-                    "Jarvis server did not become ready within 10 minutes. Check that:\n\
+                    "Freya server did not become ready within 10 minutes. Check that:\n\
                      1. uv is installed ({})\n\
-                     2. The OpenJarvis repo is at {}\n\
+                     2. The Freya repo is at {}\n\
                      3. Run 'uv sync' in that directory",
                     uv_bin,
                     root.display(),
                 )
             } else {
                 format!(
-                    "Jarvis server did not become ready within 10 minutes.\n\nStderr:\n{}",
+                    "Freya server did not become ready within 10 minutes.\n\nStderr:\n{}",
                     stderr,
                 )
             });
@@ -1332,7 +1332,7 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
 // ---------------------------------------------------------------------------
 
 fn api_base() -> String {
-    format!("http://127.0.0.1:{}", JARVIS_PORT)
+    format!("http://127.0.0.1:{}", FREYA_PORT)
 }
 
 #[tauri::command]
@@ -1539,15 +1539,15 @@ async fn fetch_models(api_url: String) -> Result<serde_json::Value, String> {
 }
 
 #[tauri::command]
-async fn run_jarvis_command(args: Vec<String>) -> Result<String, String> {
-    let mut cmd_args = vec!["run".to_string(), "jarvis".to_string()];
+async fn run_freya_command(args: Vec<String>) -> Result<String, String> {
+    let mut cmd_args = vec!["run".to_string(), "freya".to_string()];
     cmd_args.extend(args);
     let uv_bin = resolve_bin("uv");
     let output = tokio::process::Command::new(&uv_bin)
         .args(&cmd_args)
         .output()
         .await
-        .map_err(|e| format!("Failed to launch jarvis: {}", e))?;
+        .map_err(|e| format!("Failed to launch freya: {}", e))?;
 
     if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
@@ -1632,11 +1632,11 @@ async fn submit_savings(
 // Cloud API key management
 // ---------------------------------------------------------------------------
 
-/// Path to the cloud keys file (~/.openjarvis/cloud-keys.env).
+/// Path to the cloud keys file (~/.freya/cloud-keys.env).
 fn cloud_keys_path() -> std::path::PathBuf {
     let home = home_dir();
     std::path::PathBuf::from(home)
-        .join(".openjarvis")
+        .join(".freya")
         .join("cloud-keys.env")
 }
 
@@ -1693,7 +1693,7 @@ async fn save_cloud_key(key_name: String, key_value: String) -> Result<(), Strin
 
     // Tell the running server to hot-reload its cloud engine so the user
     // doesn't need to restart the app after entering an API key.
-    let reload_url = format!("http://127.0.0.1:{}/v1/cloud/reload", JARVIS_PORT);
+    let reload_url = format!("http://127.0.0.1:{}/v1/cloud/reload", FREYA_PORT);
     let _ = reqwest::Client::new()
         .post(&reload_url)
         .timeout(std::time::Duration::from_secs(10))
@@ -1796,7 +1796,7 @@ async fn delete_ollama_model(model_name: String) -> Result<serde_json::Value, St
 }
 
 // ---------------------------------------------------------------------------
-// Inference-source selection (~/.openjarvis/inference.json)
+// Inference-source selection (~/.freya/inference.json)
 // ---------------------------------------------------------------------------
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -1826,10 +1826,10 @@ struct InferenceConfig {
     engine: Option<String>,
 }
 
-/// Path to the inference-source config (~/.openjarvis/inference.json).
+/// Path to the inference-source config (~/.freya/inference.json).
 fn inference_config_path() -> std::path::PathBuf {
     std::path::PathBuf::from(home_dir())
-        .join(".openjarvis")
+        .join(".freya")
         .join("inference.json")
 }
 
@@ -1867,13 +1867,13 @@ fn upsert_engine_host(existing: &str, engine: &str, host: &str) -> Result<String
     Ok(doc.to_string())
 }
 
-/// Write the custom-endpoint host into ~/.openjarvis/config.toml so
-/// `jarvis serve` (which reads that file via load_config) points at it.
+/// Write the custom-endpoint host into ~/.freya/config.toml so
+/// `freya serve` (which reads that file via load_config) points at it.
 /// The `<ENGINE>_HOST` env var is unreliable — it is shadowed by the engine's
 /// non-empty default host in the Python layer — so config.toml is the override.
 fn set_engine_host_in_config(engine: &str, host: &str) -> Result<(), String> {
     let path = std::path::PathBuf::from(home_dir())
-        .join(".openjarvis")
+        .join(".freya")
         .join("config.toml");
     if let Some(parent) = path.parent() {
         let _ = std::fs::create_dir_all(parent);
@@ -1962,7 +1962,7 @@ mod native_overlay {
 
     fn conversation_path() -> std::path::PathBuf {
         std::path::PathBuf::from(super::home_dir())
-            .join(".openjarvis")
+            .join(".freya")
             .join("overlay-conversation.json")
     }
 
@@ -2025,9 +2025,9 @@ mod native_overlay {
     /// Build the native overlay panel.  Call once during app setup.
     pub unsafe fn create(html: &str, api_port: u16) {
         // --- Custom NSPanel subclass that accepts keyboard input ------
-        if Class::get("JarvisOverlayPanel").is_none() {
+        if Class::get("FreyaOverlayPanel").is_none() {
             let sup = Class::get("NSPanel").unwrap();
-            let mut decl = ClassDecl::new("JarvisOverlayPanel", sup).unwrap();
+            let mut decl = ClassDecl::new("FreyaOverlayPanel", sup).unwrap();
             extern "C" fn yes(_: &Object, _: Sel) -> BOOL {
                 YES
             }
@@ -2039,9 +2039,9 @@ mod native_overlay {
         }
 
         // --- WKNavigationDelegate — re-apply transparency after load --
-        if Class::get("JarvisOverlayNavDelegate").is_none() {
+        if Class::get("FreyaOverlayNavDelegate").is_none() {
             let sup = Class::get("NSObject").unwrap();
-            let mut decl = ClassDecl::new("JarvisOverlayNavDelegate", sup).unwrap();
+            let mut decl = ClassDecl::new("FreyaOverlayNavDelegate", sup).unwrap();
             extern "C" fn did_finish(_: &Object, _: Sel, wv: *mut Object, _nav: *mut Object) {
                 unsafe { force_transparent(wv); }
             }
@@ -2053,9 +2053,9 @@ mod native_overlay {
         }
 
         // --- WKScriptMessageHandler so JS can call hide() ------------
-        if Class::get("JarvisOverlayMsgHandler").is_none() {
+        if Class::get("FreyaOverlayMsgHandler").is_none() {
             let sup = Class::get("NSObject").unwrap();
-            let mut decl = ClassDecl::new("JarvisOverlayMsgHandler", sup).unwrap();
+            let mut decl = ClassDecl::new("FreyaOverlayMsgHandler", sup).unwrap();
             extern "C" fn on_msg(_: &Object, _: Sel, _ctrl: *mut Object, msg: *mut Object) {
                 unsafe {
                     let body: *mut Object = msg_send![msg, body];
@@ -2095,7 +2095,7 @@ mod native_overlay {
         // NSWindowStyleMaskNonactivatingPanel = 1 << 7
         let style: u64 = 1 << 7;
 
-        let cls = Class::get("JarvisOverlayPanel").unwrap();
+        let cls = Class::get("FreyaOverlayPanel").unwrap();
         let panel: *mut Object = msg_send![cls, alloc];
         let panel: *mut Object = msg_send![panel,
             initWithContentRect: frame
@@ -2122,7 +2122,7 @@ mod native_overlay {
         let cfg: *mut Object = msg_send![cfg, init];
 
         // Attach message handler ("overlay" channel)
-        let hcls = Class::get("JarvisOverlayMsgHandler").unwrap();
+        let hcls = Class::get("FreyaOverlayMsgHandler").unwrap();
         let handler: *mut Object = msg_send![hcls, alloc];
         let handler: *mut Object = msg_send![handler, init];
         let uc: *mut Object = msg_send![cfg, userContentController];
@@ -2141,7 +2141,7 @@ mod native_overlay {
         force_transparent(wv);
 
         // Set navigation delegate so we re-apply after page loads
-        let nav_cls = Class::get("JarvisOverlayNavDelegate").unwrap();
+        let nav_cls = Class::get("FreyaOverlayNavDelegate").unwrap();
         let nav_del: *mut Object = msg_send![nav_cls, alloc];
         let nav_del: *mut Object = msg_send![nav_del, init];
         let _: () = msg_send![wv, setNavigationDelegate: nav_del];
@@ -2329,7 +2329,7 @@ pub fn run() {
             let health = MenuItemBuilder::with_id("health", "Health: starting...")
                 .enabled(false)
                 .build(app)?;
-            let quit = MenuItemBuilder::with_id("quit", "Quit OpenJarvis").build(app)?;
+            let quit = MenuItemBuilder::with_id("quit", "Quit Freya").build(app)?;
 
             let menu = MenuBuilder::new(app)
                 .item(&show)
@@ -2341,7 +2341,7 @@ pub fn run() {
 
             let _tray = TrayIconBuilder::with_id("main")
                 .icon(app.default_window_icon().unwrap().clone())
-                .tooltip("OpenJarvis")
+                .tooltip("Freya")
                 .menu(&menu)
                 .on_menu_event(move |app, event| match event.id().as_ref() {
                     "show" => {
@@ -2364,7 +2364,7 @@ pub fn run() {
             // Create native macOS overlay panel
             #[cfg(target_os = "macos")]
             unsafe {
-                native_overlay::create(include_str!("overlay.html"), JARVIS_PORT);
+                native_overlay::create(include_str!("overlay.html"), FREYA_PORT);
             }
 
             // Register Cmd+Shift+Space to toggle the overlay
@@ -2406,7 +2406,7 @@ pub fn run() {
             search_memory,
             fetch_agents,
             fetch_models,
-            run_jarvis_command,
+            run_freya_command,
             fetch_savings,
             submit_savings,
             transcribe_audio,
@@ -2422,7 +2422,7 @@ pub fn run() {
             get_overlay_conversation,
         ])
         .build(tauri::generate_context!())
-        .expect("error while building OpenJarvis Desktop")
+        .expect("error while building Freya Desktop")
         .run(move |_app, event| {
             if let tauri::RunEvent::ExitRequested { .. } = event {
                 let b = backend.clone();
@@ -2479,12 +2479,12 @@ mod tests {
     #[test]
     fn failure_message_includes_exit_code_and_tail_and_hint() {
         let msg = format_uv_sync_failure(
-            Path::new("/home/u/.openjarvis/src"),
+            Path::new("/home/u/.freya/src"),
             Some(2),
             "error: failed to resolve numpy==2.1.3",
         );
         assert!(msg.contains("exit 2"));
-        assert!(msg.contains("/home/u/.openjarvis/src"));
+        assert!(msg.contains("/home/u/.freya/src"));
         assert!(msg.contains("failed to resolve numpy==2.1.3"));
         assert!(msg.contains("uv sync --extra server")); // actionable next step
     }

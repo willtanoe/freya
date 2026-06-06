@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "OpenJarvis"
+name = "Freya"
 version = "0.1.1"
-description = "OpenJarvis — modular AI assistant backend with composable intelligence primitives"
+description = "Freya — modular AI assistant backend with composable intelligence primitives"
 readme = "README.md"
 # Upper bound: numpy 2.2.x (pinned transitively via datasets/pandas) ships no
 # cp314 Windows wheel, so under Python 3.14 uv would compile numpy from source
@@ -14,7 +14,7 @@ readme = "README.md"
 requires-python = ">=3.10,<3.14"
 license = {text = "Apache-2.0"}
 authors = [
-    {name = "Open Jarvis Contributors"},
+    {name = "Freya Contributors"},
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -128,7 +128,7 @@ eval-sheets = ["gspread>=6.0", "google-auth>=2.0"]
 mining-pearl-cpu = [
     # Pearl Python packages (py-pearl-mining, miner-base, pearl-gateway) are
     # not on PyPI yet. They are installed at first `mine init` via the
-    # build-from-pin path in src/openjarvis/mining/_install.py:build_from_pin().
+    # build-from-pin path in src/freya/mining/_install.py:build_from_pin().
     # When Pearl publishes wheels, replace the line below with version pins.
     #
     # The extra remains as a feature-flag namespace so users can run
@@ -145,20 +145,20 @@ docs = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/open-jarvis/OpenJarvis"
-Documentation = "https://open-jarvis.github.io/OpenJarvis/"
-Repository = "https://github.com/open-jarvis/OpenJarvis"
-Issues = "https://github.com/open-jarvis/OpenJarvis/issues"
+Homepage = "https://github.com/freya-ai/Freya"
+Documentation = "https://freya-ai.github.io/Freya/"
+Repository = "https://github.com/freya-ai/Freya"
+Issues = "https://github.com/freya-ai/Freya/issues"
 
 [project.scripts]
-jarvis = "openjarvis.cli:main"
+freya = "freya.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/openjarvis"]
+packages = ["src/freya"]
 
 [tool.hatch.build.targets.wheel.force-include]
-"src/openjarvis/agents/claude_code_runner" = "_node_modules/claude_code_runner"
-"src/openjarvis/channels/whatsapp_baileys_bridge" = "_node_modules/whatsapp_baileys_bridge"
+"src/freya/agents/claude_code_runner" = "_node_modules/claude_code_runner"
+"src/freya/channels/whatsapp_baileys_bridge" = "_node_modules/whatsapp_baileys_bridge"
 "scripts/install" = "_install_scripts"
 "deploy/windows" = "_deploy/windows"
 
@@ -186,16 +186,16 @@ src = ["src", "tests"]
 select = ["E", "F", "I", "W"]
 
 [tool.ruff.lint.per-file-ignores]
-"src/openjarvis/evals/datasets/*.py" = ["E501"]
-"src/openjarvis/evals/scorers/*.py" = ["E501"]
+"src/freya/evals/datasets/*.py" = ["E501"]
+"src/freya/evals/scorers/*.py" = ["E501"]
 # hybrid/ is research code with long prompt strings and paradigm-specific
 # config dicts — same relaxation as evals research code above. The ``**`` glob
 # also covers subpackages (e.g. hybrid/skillorchestra/), which the prior
 # ``hybrid/*.py`` glob missed.
-"src/openjarvis/agents/hybrid/**/*.py" = ["E501"]
+"src/freya/agents/hybrid/**/*.py" = ["E501"]
 # research_loop.py carries long prompt strings too (documented in CLAUDE.md);
 # the ignore was missing here.
-"src/openjarvis/agents/research_loop.py" = ["E501"]
+"src/freya/agents/research_loop.py" = ["E501"]
 
 [dependency-groups]
 dev = [

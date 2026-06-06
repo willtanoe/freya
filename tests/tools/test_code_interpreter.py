@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from openjarvis.core.registry import ToolRegistry
-from openjarvis.tools.code_interpreter import CodeInterpreterTool
+from freya.core.registry import ToolRegistry
+from freya.tools.code_interpreter import CodeInterpreterTool
 
 
 class TestCodeInterpreterTool:

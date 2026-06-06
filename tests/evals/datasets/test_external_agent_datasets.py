@@ -19,9 +19,9 @@ import importlib
 import pytest
 
 PROVIDERS = [
-    ("openjarvis.evals.datasets.adp", "ADPDataset"),
-    ("openjarvis.evals.datasets.toolorchestra", "ToolOrchestraDataset"),
-    ("openjarvis.evals.datasets.generalthoughts", "GeneralThoughtsDataset"),
+    ("freya.evals.datasets.adp", "ADPDataset"),
+    ("freya.evals.datasets.toolorchestra", "ToolOrchestraDataset"),
+    ("freya.evals.datasets.generalthoughts", "GeneralThoughtsDataset"),
 ]
 
 

@@ -17,7 +17,7 @@ export const isTauri = () => typeof window !== 'undefined' && !!window.__TAURI_I
 
 // Cached API base URL fetched from the Tauri backend at startup.
 // This avoids hardcoding the port — the Rust backend is the single
-// source of truth for JARVIS_PORT.
+// source of truth for FREYA_PORT.
 let _tauriApiBase: string | null = null;
 
 /** Pre-fetch the API base URL from the Tauri backend (call once at init). */
@@ -35,7 +35,7 @@ const DESKTOP_API_FALLBACK = 'http://127.0.0.1:8000';
 
 const getSettingsApiUrl = (): string => {
   try {
-    const raw = localStorage.getItem('openjarvis-settings');
+    const raw = localStorage.getItem('freya-settings');
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed.apiUrl) return parsed.apiUrl.replace(/\/+$/, '');
@@ -52,21 +52,21 @@ export const getBase = (): string => {
   return '';
 };
 
-// Resolve the local server API key (OPENJARVIS_API_KEY). When `jarvis serve`
+// Resolve the local server API key (FREYA_API_KEY). When `freya serve`
 // is started with a key, AuthMiddleware 401s every /v1 and /api request that
 // lacks a Bearer token — so the frontend must send it (#266). Sourced from the
 // same settings blob as the API URL, with an optional build-time env override.
 // Returns '' when unset, so a keyless local server keeps working unchanged.
 export const getApiKey = (): string => {
   try {
-    const raw = localStorage.getItem('openjarvis-settings');
+    const raw = localStorage.getItem('freya-settings');
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed.apiKey) return String(parsed.apiKey);
     }
   } catch {}
-  if (import.meta.env.VITE_OPENJARVIS_API_KEY) {
-    return import.meta.env.VITE_OPENJARVIS_API_KEY as string;
+  if (import.meta.env.VITE_FREYA_API_KEY) {
+    return import.meta.env.VITE_FREYA_API_KEY as string;
   }
   return '';
 };

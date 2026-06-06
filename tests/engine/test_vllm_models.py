@@ -8,10 +8,10 @@ import httpx
 import pytest
 import respx
 
-from openjarvis.core.registry import EngineRegistry
-from openjarvis.core.types import Message, Role
-from openjarvis.engine._base import EngineConnectionError
-from openjarvis.engine.openai_compat_engines import VLLMEngine
+from freya.core.registry import EngineRegistry
+from freya.core.types import Message, Role
+from freya.engine._base import EngineConnectionError
+from freya.engine.openai_compat_engines import VLLMEngine
 
 VLLM_HOST = "http://testhost:8000"
 NEW_MODELS = ["gpt-oss:120b", "qwen3:8b", "glm-4.7-flash", "trinity-mini"]

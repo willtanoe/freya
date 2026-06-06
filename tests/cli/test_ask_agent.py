@@ -1,4 +1,4 @@
-"""Tests for ``jarvis ask --agent`` CLI integration."""
+"""Tests for ``freya ask --agent`` CLI integration."""
 
 from __future__ import annotations
 
@@ -9,12 +9,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 from click.testing import CliRunner
 
-from openjarvis.agents._stubs import AgentContext, AgentResult, ToolUsingAgent
-from openjarvis.cli import cli
-from openjarvis.core.types import ToolCall, ToolResult
-from openjarvis.tools._stubs import BaseTool, ToolSpec
+from freya.agents._stubs import AgentContext, AgentResult, ToolUsingAgent
+from freya.cli import cli
+from freya.core.types import ToolCall, ToolResult
+from freya.tools._stubs import BaseTool, ToolSpec
 
-_ask_mod = importlib.import_module("openjarvis.cli.ask")
+_ask_mod = importlib.import_module("freya.cli.ask")
 
 
 def _mock_engine(content="Hello from engine"):
@@ -34,9 +34,9 @@ def _mock_engine(content="Hello from engine"):
 
 def _register_agents():
     """Re-register agents after registry clear."""
-    from openjarvis.agents.orchestrator import OrchestratorAgent
-    from openjarvis.agents.simple import SimpleAgent
-    from openjarvis.core.registry import AgentRegistry
+    from freya.agents.orchestrator import OrchestratorAgent
+    from freya.agents.simple import SimpleAgent
+    from freya.core.registry import AgentRegistry
 
     for name, cls in [
         ("simple", SimpleAgent),
@@ -48,12 +48,12 @@ def _register_agents():
 
 def _register_tools():
     """Re-register tools after registry clear."""
-    from openjarvis.core.registry import ToolRegistry
-    from openjarvis.tools.calculator import CalculatorTool
-    from openjarvis.tools.file_read import FileReadTool
-    from openjarvis.tools.llm_tool import LLMTool
-    from openjarvis.tools.retrieval import RetrievalTool
-    from openjarvis.tools.think import ThinkTool
+    from freya.core.registry import ToolRegistry
+    from freya.tools.calculator import CalculatorTool
+    from freya.tools.file_read import FileReadTool
+    from freya.tools.llm_tool import LLMTool
+    from freya.tools.retrieval import RetrievalTool
+    from freya.tools.think import ThinkTool
 
     for name, cls in [
         ("calculator", CalculatorTool),
@@ -107,11 +107,11 @@ class _EngineSetup:
 
 @pytest.fixture
 def agent_setup():
-    from openjarvis.core.config import JarvisConfig
-    from openjarvis.core.registry import AgentRegistry, ToolRegistry
+    from freya.core.config import FreyaConfig
+    from freya.core.registry import AgentRegistry, ToolRegistry
 
     engine = _mock_engine("unused")
-    config = JarvisConfig()
+    config = FreyaConfig()
     config.intelligence.default_model = "test-model"
     config.agent.max_turns = 3
 
@@ -152,9 +152,9 @@ def mock_setup():
         patch.object(_ask_mod, "register_builtin_models"),
         patch.object(_ask_mod, "merge_discovered_models"),
     ):
-        from openjarvis.core.config import JarvisConfig
+        from freya.core.config import FreyaConfig
 
-        mock_cfg.return_value = JarvisConfig()
+        mock_cfg.return_value = FreyaConfig()
         mock_ge.return_value = ("mock", engine)
         mock_de.return_value = [("mock", engine)]
         mock_dm.return_value = {"mock": ["test-model"]}
@@ -217,8 +217,8 @@ class TestAskAgentOption:
     ):
         """When --agent is omitted, ``config.agent.default_agent`` is used.
 
-        The default ``JarvisConfig`` sets ``default_agent = "simple"``, so
-        ``jarvis ask "..."`` should route through SimpleAgent rather than
+        The default ``FreyaConfig`` sets ``default_agent = "simple"``, so
+        ``freya ask "..."`` should route through SimpleAgent rather than
         the direct-to-engine path. Without this fallback, persona settings
         (``default_system_prompt`` and SOUL.md/MEMORY.md/USER.md) would be
         silently bypassed.
@@ -240,9 +240,9 @@ class TestAskAgentOption:
     ):
         """When config's ``default_agent`` is blank and --agent is omitted,
         the original direct-to-engine path is preserved."""
-        from openjarvis.core.config import JarvisConfig
+        from freya.core.config import FreyaConfig
 
-        cfg = JarvisConfig()
+        cfg = FreyaConfig()
         cfg.agent.default_agent = ""
         monkeypatch.setattr(_ask_mod, "load_config", lambda *a, **kw: cfg)
         result = runner.invoke(cli, ["ask", "Hello"])
@@ -293,47 +293,47 @@ class TestAskAgentOption:
 
 class TestBuildTools:
     def test_build_calculator(self, mock_setup):
-        from openjarvis.cli.ask import _build_tools
-        from openjarvis.core.config import JarvisConfig
+        from freya.cli.ask import _build_tools
+        from freya.core.config import FreyaConfig
 
         _register_tools()
-        config = JarvisConfig()
+        config = FreyaConfig()
         tools = _build_tools(["calculator"], config, mock_setup, "test-model")
         assert len(tools) == 1
         assert tools[0].tool_id == "calculator"
 
     def test_build_think(self, mock_setup):
-        from openjarvis.cli.ask import _build_tools
-        from openjarvis.core.config import JarvisConfig
+        from freya.cli.ask import _build_tools
+        from freya.core.config import FreyaConfig
 
         _register_tools()
-        config = JarvisConfig()
+        config = FreyaConfig()
         tools = _build_tools(["think"], config, mock_setup, "test-model")
         assert len(tools) == 1
         assert tools[0].tool_id == "think"
 
     def test_build_unknown_tool_skipped(self, mock_setup):
-        from openjarvis.cli.ask import _build_tools
-        from openjarvis.core.config import JarvisConfig
+        from freya.cli.ask import _build_tools
+        from freya.core.config import FreyaConfig
 
-        config = JarvisConfig()
+        config = FreyaConfig()
         tools = _build_tools(["nonexistent"], config, mock_setup, "test-model")
         assert len(tools) == 0
 
     def test_build_empty_names(self, mock_setup):
-        from openjarvis.cli.ask import _build_tools
-        from openjarvis.core.config import JarvisConfig
+        from freya.cli.ask import _build_tools
+        from freya.core.config import FreyaConfig
 
-        config = JarvisConfig()
+        config = FreyaConfig()
         tools = _build_tools(["", " "], config, mock_setup, "test-model")
         assert len(tools) == 0
 
     def test_build_multiple_tools(self, mock_setup):
-        from openjarvis.cli.ask import _build_tools
-        from openjarvis.core.config import JarvisConfig
+        from freya.cli.ask import _build_tools
+        from freya.core.config import FreyaConfig
 
         _register_tools()
-        config = JarvisConfig()
+        config = FreyaConfig()
         tools = _build_tools(["calculator", "think"], config, mock_setup, "test-model")
         assert len(tools) == 2
 
@@ -350,17 +350,17 @@ class TestPersonaFilesReachModel:
         self, runner, monkeypatch, tmp_path
     ):
         """SOUL.md content must appear in the system message sent to the engine."""
-        from openjarvis.core.config import JarvisConfig
+        from freya.core.config import FreyaConfig
 
         # Write a SOUL.md with a unique sentinel string we can grep for
         soul = tmp_path / "SOUL.md"
-        soul.write_text("PERSONA_SENTINEL_zh_jarvis", encoding="utf-8")
+        soul.write_text("PERSONA_SENTINEL_zh_freya", encoding="utf-8")
         memory = tmp_path / "MEMORY.md"
         memory.write_text("MEMORY_SENTINEL", encoding="utf-8")
         user = tmp_path / "USER.md"
         user.write_text("USER_SENTINEL", encoding="utf-8")
 
-        cfg = JarvisConfig()
+        cfg = FreyaConfig()
         cfg.memory_files.soul_path = str(soul)
         cfg.memory_files.memory_path = str(memory)
         cfg.memory_files.user_path = str(user)
@@ -400,7 +400,7 @@ class TestPersonaFilesReachModel:
         assert system_messages, f"No SYSTEM message in {messages!r}"
         joined = "\n".join(m.content for m in system_messages)
         assert "BASELINE_TEMPLATE" in joined
-        assert "PERSONA_SENTINEL_zh_jarvis" in joined
+        assert "PERSONA_SENTINEL_zh_freya" in joined
         assert "MEMORY_SENTINEL" in joined
         assert "USER_SENTINEL" in joined
 
@@ -409,12 +409,12 @@ class TestPersonaFilesReachModel:
     ):
         """OrchestratorAgent's __init__ doesn't accept ``prompt_builder``;
         the wiring must skip it silently rather than crash."""
-        from openjarvis.core.config import JarvisConfig
+        from freya.core.config import FreyaConfig
 
         soul = tmp_path / "SOUL.md"
         soul.write_text("ORCH_PERSONA_SENTINEL", encoding="utf-8")
 
-        cfg = JarvisConfig()
+        cfg = FreyaConfig()
         cfg.memory_files.soul_path = str(soul)
         cfg.agent.context_from_memory = False
 

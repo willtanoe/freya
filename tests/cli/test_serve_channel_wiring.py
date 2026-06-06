@@ -1,6 +1,6 @@
-"""Tests for JarvisSystem.wire_channel() — channel → agent routing.
+"""Tests for FreyaSystem.wire_channel() — channel → agent routing.
 
-These tests exercise wire_channel() on JarvisSystem directly. The serve.py
+These tests exercise wire_channel() on FreyaSystem directly. The serve.py
 entrypoint now delegates all channel-wiring logic there.
 """
 
@@ -8,11 +8,11 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from openjarvis.channels._stubs import ChannelMessage
-from openjarvis.core.config import JarvisConfig
-from openjarvis.core.events import EventBus
-from openjarvis.sessions.session import SessionStore
-from openjarvis.system import JarvisSystem
+from freya.channels._stubs import ChannelMessage
+from freya.core.config import FreyaConfig
+from freya.core.events import EventBus
+from freya.sessions.session import SessionStore
+from freya.system import FreyaSystem
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -34,13 +34,13 @@ def _make_channel_message(
     )
 
 
-def _make_system(engine=None, agent_name="", tmp_path=None) -> JarvisSystem:
-    """Build a minimal JarvisSystem with mock engine for testing wire_channel."""
-    config = JarvisConfig()
+def _make_system(engine=None, agent_name="", tmp_path=None) -> FreyaSystem:
+    """Build a minimal FreyaSystem with mock engine for testing wire_channel."""
+    config = FreyaConfig()
     if tmp_path is not None:
         config.sessions.db_path = str(tmp_path / "sessions.db")
     mock_engine = engine or MagicMock()
-    return JarvisSystem(
+    return FreyaSystem(
         config=config,
         bus=EventBus(record_history=False),
         engine=mock_engine,
@@ -57,7 +57,7 @@ def _fire(channel_mock, cm: ChannelMessage) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Tests via JarvisSystem.wire_channel()
+# Tests via FreyaSystem.wire_channel()
 # ---------------------------------------------------------------------------
 
 
@@ -195,11 +195,11 @@ class TestWireChannelErrorHandling:
 
 
 class TestChannelToolLoading:
-    """JarvisSystem receives tools when agent accepts them."""
+    """FreyaSystem receives tools when agent accepts them."""
 
     def test_tool_using_agent_receives_tools(self, tmp_path):
-        """JarvisSystem built with a tool list passes tools to the agent via ask()."""
-        from openjarvis.tools._stubs import BaseTool, ToolSpec
+        """FreyaSystem built with a tool list passes tools to the agent via ask()."""
+        from freya.tools._stubs import BaseTool, ToolSpec
 
         # Minimal fake tool
         class _FakeTool(BaseTool):
@@ -209,10 +209,10 @@ class TestChannelToolLoading:
                 pass
 
         fake_tool = _FakeTool()
-        config = JarvisConfig()
+        config = FreyaConfig()
         config.sessions.db_path = str(tmp_path / "sessions.db")
 
-        system = JarvisSystem(
+        system = FreyaSystem(
             config=config,
             bus=EventBus(record_history=False),
             engine=MagicMock(),
@@ -226,12 +226,12 @@ class TestChannelToolLoading:
         assert system.tools[0].spec.name == "fake"
 
     def test_non_tool_agent_receives_empty_tools(self, tmp_path):
-        """JarvisSystem with no tools list results in empty tools — simple agent
+        """FreyaSystem with no tools list results in empty tools — simple agent
         unaffected."""
-        config = JarvisConfig()
+        config = FreyaConfig()
         config.sessions.db_path = str(tmp_path / "sessions.db")
 
-        system = JarvisSystem(
+        system = FreyaSystem(
             config=config,
             bus=EventBus(record_history=False),
             engine=MagicMock(),

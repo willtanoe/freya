@@ -10,7 +10,7 @@ import pytest
 fastapi = pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient  # noqa: E402
 
-from openjarvis.server.app import create_app  # noqa: E402
+from freya.server.app import create_app  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -46,7 +46,7 @@ def _make_engine(content="Hello from server", models=None):
 
 
 def _make_agent(content="Hello from agent"):
-    from openjarvis.agents._stubs import AgentResult
+    from freya.agents._stubs import AgentResult
 
     agent = MagicMock()
     agent.agent_id = "mock"
@@ -265,8 +265,8 @@ class TestChatCompletions:
         The fix unwraps the engine via `engine._inner` before passing it
         to `instrumented_generate`. This test pins that contract.
         """
-        from openjarvis.core.events import EventBus, EventType
-        from openjarvis.telemetry.instrumented_engine import InstrumentedEngine
+        from freya.core.events import EventBus, EventType
+        from freya.telemetry.instrumented_engine import InstrumentedEngine
 
         # Build a fresh engine + bus and explicitly wrap with
         # InstrumentedEngine (mirrors the production app construction).
@@ -310,7 +310,7 @@ class TestChatCompletions:
         # would carry no version stamp and `current_methodology_only`
         # would drop it from leaderboard sums entirely. Pin that
         # contract — see the adversarial review on PR #498.
-        from openjarvis.core.types import TOKEN_COUNTING_VERSION
+        from freya.core.types import TOKEN_COUNTING_VERSION
 
         rec = received_records[0].data["record"]
         assert rec.token_counting_version == TOKEN_COUNTING_VERSION, (
@@ -387,8 +387,8 @@ class TestChatCompletions:
         agent's own tool loop, and word-splits generic filler content,
         dropping the tool_calls the caller asked for.
         """
-        from openjarvis.core.events import EventBus
-        from openjarvis.engine._stubs import StreamChunk
+        from freya.core.events import EventBus
+        from freya.engine._stubs import StreamChunk
 
         engine = _make_engine()
 

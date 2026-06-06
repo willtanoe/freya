@@ -1,0 +1,32 @@
+[package]
+name = "freya-python"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "freya_rust"
+crate-type = ["cdylib"]
+
+[dependencies]
+freya-core = { path = "../freya-core" }
+freya-engine = { path = "../freya-engine" }
+freya-security = { path = "../freya-security" }
+freya-tools = { path = "../freya-tools" }
+freya-agents = { path = "../freya-agents" }
+freya-traces = { path = "../freya-traces" }
+freya-telemetry = { path = "../freya-telemetry" }
+freya-learning = { path = "../freya-learning" }
+freya-mcp = { path = "../freya-mcp" }
+freya-sessions = { path = "../freya-sessions" }
+freya-workflow = { path = "../freya-workflow" }
+freya-skills = { path = "../freya-skills" }
+freya-recipes = { path = "../freya-recipes" }
+freya-templates = { path = "../freya-templates" }
+freya-a2a = { path = "../freya-a2a" }
+freya-scheduler = { path = "../freya-scheduler" }
+pyo3 = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+once_cell = { workspace = true }
+parking_lot = { workspace = true }
