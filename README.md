@@ -1,7 +1,7 @@
 <div align="center">
   <img alt="Freya" src="assets/freya_landscape.png" width="400">
 
-  <p><i>Personal AI, On Personal Devices.</i></p>
+  <p><i>Cloud AI, Simplified.</i></p>
 </div>
 
 ---
@@ -16,7 +16,18 @@ Freya is a community fork of **[OpenJarvis](https://github.com/open-jarvis/OpenJ
 
 Fork maintained by **[Willtanoe](https://github.com/willtanoe)**.
 
-## Usage
+---
+
+## Overview
+
+Freya is a cloud-first AI assistant that connects directly to your favorite model providers — OpenAI, Anthropic, Google Gemini, DeepSeek, Groq, OpenRouter, and more. No local GPU required. Bring your own API keys, and Freya fetches available models dynamically from each provider.
+
+## Quick Start
+
+### Prerequisites
+- Python 3.10+
+- Node.js 20+
+- API key from at least one cloud provider
 
 ### Installation
 
@@ -30,17 +41,42 @@ irm https://willtanoe.github.io/freya/install.ps1 | iex
 curl -fsSL https://willtanoe.github.io/freya/install.sh | bash
 ```
 
+### Run
+
+```bash
+# Terminal 1 — Backend
+freya serve
+
+# Terminal 2 — Frontend
+cd frontend && npm install && npm run dev
+```
+
+Open `http://localhost:5173` — configure your API keys via the onboarding flow or `⌘K` → Providers.
+
 ### Commands
 
 ```bash
-freya                          # start chatting (default: chat-simple)
-freya ask "your question"      # ask a single question
 freya serve                    # start web server (localhost:8000)
+freya ask "your question"      # ask a single question
 freya doctor                   # check system status
 freya init --preset <name>     # switch configuration preset
 ```
 
 Available presets: `chat-simple`, `code-assistant`, `deep-research`, `morning-digest-mac`, `morning-digest-linux`, `morning-digest-minimal`, `scheduled-monitor`
+
+### Supported Providers
+
+| Provider    | Env Variable         | API Endpoint                           |
+|------------|---------------------|----------------------------------------|
+| OpenAI     | `OPENAI_API_KEY`     | `https://api.openai.com/v1`            |
+| Anthropic  | `ANTHROPIC_API_KEY`  | `https://api.anthropic.com/v1`         |
+| Google     | `GEMINI_API_KEY`     | `https://generativelanguage.googleapis.com` |
+| DeepSeek   | `DEEPSEEK_API_KEY`   | `https://api.deepseek.com/v1`          |
+| Groq       | `GROQ_API_KEY`       | `https://api.groq.com/openai/v1`       |
+| OpenRouter | `OPENROUTER_API_KEY` | `https://openrouter.ai/api/v1`         |
+| Custom     | `CUSTOM_API_KEY`     | Any OpenAI-compatible endpoint         |
+
+Models are fetched dynamically — no hardcoded lists. Configure a provider and its available models appear instantly.
 
 ### Development
 
@@ -49,7 +85,6 @@ git clone https://github.com/willtanoe/freya.git
 cd freya
 uv sync --extra dev
 uv run pre-commit install
-uv run pytest tests/ -v
 ```
 
 ## License
